@@ -18,7 +18,51 @@
 - **Browsers keep serving old files.** After a data rebuild the browser showed the old region names until a hard refresh. Data files are now always re-checked with the server; after code changes, use Ctrl+F5.
 - **Headless Edge is good for layout checks but not for dark mode.** Its screenshots and `--dump-dom` reliably show sizes, notes and errors, but dark mode needs checking by eye.
 - **Interactions can be tested headless, with care.** Driving Edge through its DevTools protocol (Python `websockets`) tests clicks, hover and keyboard. Three traps: `--window-size` is ignored (set the viewport with `Emulation.setDeviceMetricsOverride`), a reused profile restores old scroll positions, and Edge leaves child processes running unless the whole process tree is killed.
-- **Pushing from Claude's shell fails with SSH keys.** The key needs Nicola's own session, so Claude commits and Nicola pushes.
+
+## Git and GitHub
+
+**Pushing is done by Nicola.** Claude's `git push` failed with `Permission denied (publickey)`: the repository is connected over SSH, and the SSH key (`~/.ssh/id_ed25519`) wasn't usable from Claude's background shell, probably because it needs a passphrase or an agent that only Nicola's own session has. So Claude commits (or leaves changes for Nicola to commit) and Nicola pushes from their own terminal. This also means nothing goes public without Nicola seeing it first.
+
+**Nicola's question (2026-10-22):** once Claude has finished its changes, what sequence of commands sends the folder's content to GitHub? Claude's answer follows.
+
+Run the commands in a terminal opened in `C:\GOR Dashboard`. The VS Code terminal opens there already; in Git Bash, first type `cd "/c/GOR Dashboard"`.
+
+*The standard sequence*
+
+```
+git status
+git add -A
+git commit -m "Short description of what changed"
+git push origin main
+```
+
+1. **`git status`** lists the files that have changed since the last commit. It changes nothing, so it's always safe. Check that the list contains only files you expect.
+2. **`git add -A`** marks all the changes for the next commit: new, modified and deleted files. Git calls this "staging".
+3. **`git commit -m "..."`** saves a snapshot of the staged changes on your computer, with a message. Nothing goes to GitHub yet. Write a message that tells a colleague what changed, e.g. `"Remove fodder and grass (R38)"`.
+4. **`git push origin main`** sends your commits to GitHub. `origin` is the name of the GitHub repository and `main` is the branch. A minute or two later, GitHub Pages updates the live site. Press Ctrl+F5 on the site to see the new version.
+
+*When Claude has already committed*
+
+If Claude says it has committed the changes but couldn't push, run only:
+
+```
+git status
+git push origin main
+```
+
+After a commit, `git status` says *"Your branch is ahead of 'origin/main' by 2 commits"*. That means there are 2 commits waiting to be pushed. After the push it says *"up to date"*.
+
+*Useful checks*
+
+- **`git log --oneline -5`** shows the last 5 commits, one line each.
+- **`git log --oneline origin/main..main`** lists the commits you have locally that aren't on GitHub yet. If nothing is printed, everything has been pushed.
+
+*Two things to watch*
+
+- **If the push is rejected** with a message about the remote containing work you don't have, someone has changed the repository on GitHub, for example by editing a file on the website. Run `git pull origin main` first, then push again.
+- **After a data change,** the browser data has to be rebuilt before committing: `python scripts/build_data.py`. Claude does this as part of its changes. If you edit a `*_REF.csv` or metadata file yourself, run it before the commit.
+
+If unsure, run `git status` first. It tells you where you are, and it often suggests the next command too.
 
 ---
 *Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-10-22.*

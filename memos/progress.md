@@ -84,6 +84,7 @@ Diary entries follow, newest first.
   - A map carousel when two or more commodities are selected (R39).
 - Tested R37 and R39 by driving headless Edge through its DevTools protocol (a Python script using `websockets`): carousel arrows, wrap-around, dots, Left/Right keys, the "Map and rankings show" drop-down, keyboard focus after each step, scroll position, and the (i) button's hover, click, Escape and phone-width placement. Screenshots at 1,400 and 420 px; one-commodity views show no carousel.
 - Committed everything as `1e3f323` ("Dashboard R34-R39: data modifications, index info, map carousel"). Claude's push failed (`Permission denied (publickey)`: the SSH key isn't usable from Claude's shell), so Nicola is to push from their own terminal with `git push origin main`.
+- Nicola asked for the sequence of Git commands to send the folder's content to GitHub once Claude has finished its changes. Claude explained the steps (status, add, commit, push, plus checks and what to do if a push is rejected). At Nicola's request, the question and the full answer are in `memos/learnings.md`, section "Git and GitHub".
 
 **The question about the hunger aggregates (summary given to Nicola)**
 - Negative risk-of-hunger values are shown as 0 (R26). Aggregates are clipped at 0 too, but not recomputed. IMPACT sums countries *including* their negatives, so its totals are below the sum of the zeroed countries. In 2050:
