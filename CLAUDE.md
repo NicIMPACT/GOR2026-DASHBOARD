@@ -4,17 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Data for a dashboard for the IFPRI **Global Outlook Report (GOR) 2026** (Global Futures 2026). The inputs are IMPACT model projections, 2025–2050 in 5-year steps. Nicola Cenacchi (IFPRI) prepared them and extracted them for Nilam.
+Data for a dashboard for the IFPRI **Global Outlook Report (GOR) 2026** (Global Futures 2026). The inputs are IMPACT model projections, 2025–2050 in 5-year steps. Nicola Cenacchi (IFPRI) prepared them and extracted them for Nilam Prasai (IFPRI). The AI attribution line in the dashboard footer names both, Nicola first (R36).
 
 The plan is to build a static web dashboard from the four `*_REF.csv` datasets. The data and code will go in a GitHub repository and be published with GitHub Pages, so the dashboard must run entirely in the browser, with no server backend. Nicola confirmed on 2026-10-20 that all the data is cleared for public release.
 
-There is no git repository yet. Nicola will create it and upload the files.
+The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, branch `main`). GitHub Pages serves it from `/docs` (enabled by Nicola, 2026-10-22), presumably at https://nicimpact.github.io/GOR2026-DASHBOARD/.
 
 ## Dashboard: commands and architecture
 
 - Rebuild the browser data after any change to `*_REF.csv` or `metadata files/`: `python scripts/build_data.py` (needs pandas and openpyxl). This writes `docs/data/{food_security,prices_trade,production_demand,yield_area,meta}.json`. The script stops with an error if a region or commodity is missing from the metadata.
 - Preview: `python -m http.server 8000 -d docs`, then open http://localhost:8000. Opening the file directly from disk (`file://`) fails, because the browser blocks `fetch`.
-- No test suite. To check rendering, run headless Edge (`msedge --headless=new --virtual-time-budget=15000 --screenshot=... --window-size=1400,2200 "http://localhost:8000/#tab=food"`) and look at the screenshot. Use `--dump-dom` to check the `#status` text and the count of `js-plotly-plot` elements.
+- No test suite. To check rendering, run headless Edge (`msedge --headless=new --virtual-time-budget=15000 --screenshot=... --window-size=1400,2200 "http://localhost:8000/#tab=food"`) and look at the screenshot. Use `--dump-dom` to check the `#status` text and the count of `js-plotly-plot` elements. To test clicks and hover, drive Edge through its DevTools protocol (`--remote-debugging-port`, Python `websockets`). Then use a fresh `--user-data-dir` per run (a reused profile restores the old scroll position) and set the viewport with `Emulation.setDeviceMetricsOverride` (`--window-size` alone leaves a small viewport). Kill the whole Edge process tree afterwards.
 - GitHub Pages serves `docs/` ("Deploy from a branch", `/docs` folder). `docs/.nojekyll` disables Jekyll.
 - Front end: plain JavaScript with no build step. Plotly.js 2.35.2 is loaded from the jsDelivr CDN and covers line, bar and choropleth charts. The world map's topojson also loads from Plotly's CDN.
   - `docs/js/config.js` holds all wording, **units**, colours, defaults and the 5% hunger goal. Edit wording and units there, not in `app.js`.
@@ -29,7 +29,8 @@ There is no git repository yet. Nicola will create it and upload the files.
   - There is one y-axis per chart, never a dual axis.
   - Map classes: quantiles in general, fixed classes for share at risk (5% is always a class edge), and blue/red around zero for net trade.
   - Yields and world prices for commodity groups and totals (e.g. `CER`, `AllC`) are shown like individual commodities. They are IMPACT's own, properly computed aggregates (Nicola, 2026-10-21, R29). Never compute group yields or prices in the dashboard; use only the values IMPACT provides.
-  - Several commodities (up to 6) are shown as small multiples, one panel per commodity, so colour always means region (R14). The map, rankings and price-change chart show one commodity, chosen with "Map and rankings show".
+  - Several commodities (up to 6) are shown as small multiples, one panel per commodity, so colour always means region (R14). The map, rankings and price-change chart show one commodity, chosen with "Map and rankings show" or with the carousel above the map (arrows, dots, Left/Right keys; `mapCarousel()` in `app.js`, R39). Both set the same `state.focus`, so the map and rankings always agree.
+  - The (i) button next to "Line charts show" explains values vs. index (`indexInfo` in `config.js`, `buildInfo()` in `app.js`, R37). It opens on hover, stays open on click, and closes with Escape or a click elsewhere.
   - Net trade is drawn as area panels, one per region, coloured by sign (blue exports, red imports), not by region (R13). World has no net trade (exports and imports cancel out), so it is skipped on the trade tab but kept in the shared selection (`tradeExcluded`, R33).
   - The default selection is the six CG regions: CWANA, ESA, LAC, SEA, SA, WCA (`defaults.regions`, R32).
   - The optional index view (2025 = 1) is the only derived value besides % price changes. It is not applied to share at risk or net trade, where values near or below zero make an index meaningless (R15).
@@ -44,17 +45,16 @@ There is no git repository yet. Nicola will create it and upload the files.
 
 ## Files
 
-- `original files/`: raw IMPACT extracts (`Food security.csv`, `Prices_Trade.csv`, `Total_Production.csv`), kept unchanged. They contain two scenarios, `REF` and `REF_NoCC` (reference without climate change). Source: `IFPRI Dropbox\...\Global Futures 2026\GlobalOutlookReport_nc26\IMPACT_analysis_26\Extracted_update26\Data extracts for Nilam` (see `original files/read me.txt`).
-  - It also holds `Production_REF.csv`, which is not raw. It is the earlier cleaned file that combined all five production parameters, and it was superseded on 2026-10-20 by the two files below. It is kept for reference only.
+- Raw IMPACT extracts (`Food security.csv`, `Prices_Trade.csv`, `Total_Production.csv`, with scenarios `REF` and `REF_NoCC`, reference without climate change) are **not in this folder**. Nicola removed the former `original files/` folder on 2026-10-22. They remain at the source: `IFPRI Dropbox\...\Global Futures 2026\GlobalOutlookReport_nc26\IMPACT_analysis_26\Extracted_update26\Data extracts for Nilam`.
 - Top-level `*_REF.csv`: cleaned in Stata (the Stata script is not in this folder). They keep only `REF` and drop the `productiontype` column. These are the files the dashboard uses. They were checked on 2026-10-20 and match the raw `REF` rows exactly.
   - `Food_security_REF.csv`: `Kcal pc`, `Kcal pc by Commodity`, `Pop at risk of hunger`, `Share Pop at risk of hunger`
   - `Prices_Trade_REF.csv`: `Net Trade`, `World Price`
   - `Production_Demand_REF.csv`: `Total Demand`, `Food Demand`, `Production`
-  - `Yield_Area_REF.csv`: `Total Area`, `Total Yield`. Crops only (47 commodities, no livestock), and 176 regions (Greenland has no crop data).
+  - `Yield_Area_REF.csv`: `Total Area`, `Total Yield`. Crops only (47 commodity codes including groups and totals, no livestock; 44 after fodder and grass are dropped), and 176 regions (Greenland has no crop data).
 
 - `metadata files/`: reference nomenclature for regions and commodities. Nicola confirmed on 2026-10-20 that these are **the current IMPACT model standard**. Use them as the authoritative source for codes, labels, groupings and hierarchies, and don't rebuild these from the data. Each workbook has a single sheet. The headers are intentional, so leave them as they are. `CG6` marks the nomenclature for the 6 CGIAR regions and `GOR` marks the Global Outlook Report nomenclature. The header repeats across columns (pandas reads them as `CG6`, `CG6.1`, … and `GOR`, `GOR.1`, …), so refer to columns by position.
   - `regional classification.xlsx` has 158 countries. The columns are: ISO3 code (`Cty`), country name as used in the data, `WLD`, `DVG`/`DVD`, `CGSIX`/`ROW`, CG region (`CWANA`, `EAPhi`, `ESA`, `EUR`, `FSU`, `LAC`, `NA`, `SA`, `SEA`, `WCA`), World Bank income group, the CG region's full name (column `CG6-full names`, added 2026-10-21 in place of the former continent column), and a combined `REGION-Country` label.
-  - `commodity classification.xlsx` has 167 IMPACT codes mapping to 77 GOR names. The columns are: IMPACT code, long group name, GOR name as used in the data, diet group (`ASF`, `CER`, `RTB`, `PUL`, `F&V`, `O&S`, `OTH`, `AQF`, plus `MLS` oilmeals and `FORx` fodder/grass), combined `GROUP-Name` label, `All`, and the sub-total (`AllA` animal, `AllC` crops, `AllF` aquatic). Most GOR names have two IMPACT codes, a `j`-prefixed and a `c`-prefixed one. This is likely IMPACT's production-activity vs. commodity split; check before relying on it. Fodder/grass (`FORx`) has no `All`/sub-total, so it is excluded from the totals.
+  - `commodity classification.xlsx` has 167 IMPACT codes mapping to 77 GOR names. The columns are: IMPACT code, long group name, GOR name as used in the data, diet group (`ASF`, `CER`, `RTB`, `PUL`, `F&V`, `O&S`, `OTH`, `AQF`, plus `MLS` oilmeals and `FORx` fodder/grass), combined `GROUP-Name` label, `All`, and the sub-total (`AllA` animal, `AllC` crops, `AllF` aquatic). Most GOR names have two IMPACT codes, a `j`-prefixed and a `c`-prefixed one. `j` is the production activity and `c` the commodity (confirmed by Nicola, 2026-10-22). The species name "Mmolluscs and other invertebrates" has a typo; leave it as is (Nicola, 2026-10-22), since that species isn't in the data. Fodder/grass (`FORx`) has no `All`/sub-total, so it is excluded from the totals. The dashboard leaves it out entirely (R38): `EXCLUDE_GROUPS` in `build_data.py` drops `Fodders`, `Grass` and `FORx` from every dataset and from `meta.json`.
 
 - `scripts/build_data.py`: converts the CSVs and metadata into JSON for the browser.
 - `docs/`: the website that GitHub Pages publishes (HTML/CSS/JS plus `data/*.json`).
@@ -62,7 +62,7 @@ There is no git repository yet. Nicola will create it and upload the files.
 
 ## Data structure
 
-These are long-format tables. The columns are `impactparameter, scenario, commodity, commodity_agg, region, regional_agg, year, value`. The older/original files also have `productiontype`, and their last column is named `Value` (capital V).
+These are long-format tables. The columns are `impactparameter, scenario, commodity, commodity_agg, region, regional_agg, year, value`. The raw extracts also have `productiontype`, and their last column is named `Value` (capital V).
 
 - `region` mixes countries (full names, e.g. `Angola`) with aggregates: `WLD`, `DVG`/`DVD`, `EUR`, `FSU`, `NA`, `EAPhi`, and income groups (`Low income`, `Lower middle income`, …). The CGIAR regions (`CGSIX`, `CWANA`, `WCA`, `ESA`, `SA`, `SEA`, `LAC`, `ROW`) are flagged by `regional_agg == "CG_regions"`. Filter out aggregates before summing countries, or totals will be double-counted.
 - `commodity` also mixes individual commodities with aggregates: `All`, `AllA`, `AllC`, … and the diet groups (`ASF`, `CER`, `RTB`, `PUL`, `F&V`, `O&S`, `OTH`, `AQF`, flagged by `commodity_agg == "diet"`). In Food security, `-` means "not commodity-specific".
@@ -101,7 +101,7 @@ A negative number of people is impossible, so this is a model artefact.
 - **Implementation:** `CLIP_AT_ZERO` in `scripts/build_data.py` sets the 528 negative rows to 0 when the JSON is built. The raw and cleaned CSVs are unchanged. Doing it at build time keeps every view consistent: maps, charts, rankings and CSV downloads.
 - **Exception, Burundi and Eritrea (R31, 2026-10-21, temporary):** their risk-of-hunger rows are dropped (`HUNGER_NO_DATA` in `build_data.py`), so they show as "no data" instead of 0. See the reflections below for why. Nicola will decide on a lasting treatment after checking (reminder set for 2026-10-22).
 - **What users see:** the hunger map, the share and population charts and the ranking say "Negative values in the model output are shown as 0, except for Burundi and Eritrea, shown as no data because the model value is not reliable." (`hungerClipNote` in `docs/js/config.js`).
-- **Aggregates are clipped but not recomputed.** IMPACT's aggregates are sums of their countries *including* the negatives. So, in 2050:
+- **Aggregates are never recomputed** (Nicola, 2026-10-22, R34), so they stay as in the Global Outlook Report and IMPACT's original results. This holds for every data change; all changes are listed in `memos/progress.md`, section "Data modifications". Aggregates are clipped at 0 like the countries. IMPACT's aggregates are sums of their countries *including* the negatives. So, in 2050:
   - World is 491.5 million, while the zeroed countries add up to 497.4 million (+5.8 million, +1.2%);
   - High income is 0.3 million, against 5.6 million summing its countries;
   - developing countries (`DVG`) and the CGIAR six are off by about 1 million or less.
@@ -117,7 +117,11 @@ A negative number of people is impossible, so this is a model artefact.
   3. ask the IMPACT team how the hunger module behaves at very low calorie levels.
 
   Option 2 is the safest for a public dashboard. Option 3 is needed to know the right answer.
-- **Aggregates:** if the gap between IMPACT's totals and the sum of zeroed countries matters (it is largest for High income and the developed countries), compare with how the GOR report itself handles these values.
+- **Aggregates:** settled on 2026-10-22 (R34): keep IMPACT's totals and never recompute them.
+
+## Other series removed from the dashboard
+
+- **China, Net Trade, Maize** (R35, Nicola, 2026-10-22; temporary): the team found an issue in the model for this series and is fixing it. The 6 rows are dropped at build time (`SERIES_NO_DATA` in `build_data.py`, a list of parameter, region and commodity series), so China shows as no data. Aggregates that include China are unchanged (R34). To remove another single series, add it to `SERIES_NO_DATA` and log it in "Data modifications".
 
 ## Project memos
 

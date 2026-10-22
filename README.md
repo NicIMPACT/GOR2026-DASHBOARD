@@ -10,7 +10,6 @@ It is a static website (HTML, CSS and JavaScript), published with GitHub Pages f
 |---|---|
 | `*_REF.csv` | Cleaned IMPACT extracts, REF scenario: the dashboard's source data |
 | `metadata files/` | IMPACT region and commodity nomenclature (current standard) |
-| `original files/` | Raw IMPACT extracts (REF and REF_NoCC) |
 | `scripts/build_data.py` | Converts the CSVs and metadata into `docs/data/*.json` |
 | `docs/` | The website: `index.html`, `css/`, `js/config.js` (labels, units, colours), `js/app.js`, `data/` |
 
@@ -45,4 +44,4 @@ In the repository, go to Settings → Pages. Under "Build and deployment", choos
 - Region code `NA` is North America, not a missing value.
 
 ---
-*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-10-20.*
+*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi and Nilam Prasai (IFPRI), 2026-10-22.*

@@ -10,7 +10,8 @@ INPUTS (project root)
   Production_Demand_REF.csv, Yield_Area_REF.csv
       IMPACT model projections, scenario REF only, 2025-2050 in 5-year steps.
       Source: Global Futures 2026 / GlobalOutlookReport_nc26 /
-      IMPACT_analysis_26 / Extracted_update26 (see original files/read me.txt).
+      IMPACT_analysis_26 / Extracted_update26 / Data extracts for Nilam
+      (IFPRI Dropbox; raw extracts not kept in this repository).
       Cleaned in Stata by N. Cenacchi; the Stata script is not in this folder.
   metadata files/regional classification.xlsx
   metadata files/commodity classification.xlsx
@@ -20,7 +21,9 @@ OUTPUTS (docs/data/, served by GitHub Pages)
   <dataset>.json : {"years": [...], "data": {parameter: {region: {commodity: [v per year]}}}}
                    Values are copied unchanged from the CSVs (no rounding), except that
                    negative risk-of-hunger values are set to 0 (see CLIP_AT_ZERO) and
-                   HUNGER_NO_DATA countries' risk-of-hunger rows are dropped;
+                   HUNGER_NO_DATA countries' risk-of-hunger rows, the
+                   SERIES_NO_DATA series and the EXCLUDE_GROUPS commodities
+                   (fodder and grass) are dropped;
                    a missing year is written as null.
   meta.json      : region and commodity lists with labels, ISO3 codes and groupings.
 
@@ -36,7 +39,9 @@ KEY ASSUMPTIONS (flagged; see memos/progress.md)
     (264 rows per parameter; a model artefact). Shown as 0 (Nicola, 2026-10-21, R26).
     Aggregates are clipped too but NOT recomputed: IMPACT's World total is the sum of
     country values including the negatives, so it stays about 5.8 million (~1%) below the
-    sum of the clipped country values.
+    sum of the clipped country values. Nicola confirmed on 2026-10-22 (R34) that aggregates
+    are never recomputed, so they match the Global Outlook Report and IMPACT's results.
+  - All changes to the data are listed in memos/progress.md, section "Data modifications".
 """
 
 import json
@@ -121,8 +126,12 @@ COMMODITY_GROUP_LABELS = {
     "OTH": "Other crops",
     "AQF": "Aquatic foods",
     "MLS": "Oilmeals",
-    "FORx": "Fodder & grass",
 }
+# Diet groups left out of the dashboard entirely: their member commodities and the group
+# row itself are dropped from every dataset and from meta.json. Fodder and grass (FORx:
+# Fodders, Grass) are not part of the "All" totals in the metadata, so no total is affected
+# (Nicola, 2026-10-22, R38).
+EXCLUDE_GROUPS = {"FORx"}
 
 
 # Parameters whose negative values are model artefacts and are written as 0 (R26).
@@ -132,6 +141,11 @@ CLIP_AT_ZERO = {"Pop at risk of hunger", "Share Pop at risk of hunger"}
 # per person per day in 2025), so 0 ("no one at risk") would mislead. Temporary, pending a
 # check with the IMPACT team (Nicola, 2026-10-21, R31). Aggregates are not changed.
 HUNGER_NO_DATA = {"Burundi", "Eritrea"}
+# Single series removed from the dashboard (shown as "no data"), as (parameter, region,
+# commodity). Aggregates that include them are not changed (Nicola, 2026-10-22).
+#   - China maize net trade (R35): a model issue the team is fixing; temporary. IMPACT shows China as a large net
+#     exporter in 2025 (+31.5 million t), swinging to -7.0 in 2040 and +6.4 in 2045.
+SERIES_NO_DATA = {("Net Trade", "China", "Maize")}
 
 
 def read_csv(name):
@@ -181,7 +195,7 @@ def build_meta(all_regions, all_commodities):
     # Columns by position: IMPACT code, long group name, GOR name, diet group,
     # combined label, All, sub-total.
     com.columns = ["impact", "group_long", "name", "group", "combined", "all", "total"]
-    com = com.drop_duplicates("name")
+    com = com[~com["group"].isin(EXCLUDE_GROUPS)].drop_duplicates("name")
     commodities = []
     for c in com.itertuples():
         commodities.append({"id": c.name, "label": c.name, "kind": "item",
@@ -199,18 +213,35 @@ def build_meta(all_regions, all_commodities):
             "groups": COMMODITY_GROUP_LABELS, "years": YEARS}
 
 
+def excluded_commodities():
+    """Commodity names (and group codes) of the EXCLUDE_GROUPS diet groups, per the metadata."""
+    com = pd.read_excel(ROOT / "metadata files" / "commodity classification.xlsx", keep_default_na=False)
+    group = com.iloc[:, 3]  # diet group column (by position: headers repeat by design)
+    return set(com.loc[group.isin(EXCLUDE_GROUPS)].iloc[:, 2]) | EXCLUDE_GROUPS
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     all_regions, all_commodities = set(), set()
+    excluded = excluded_commodities()
     for key, fname in DATASETS.items():
         df = read_csv(fname)
         assert set(df["scenario"]) == {"REF"}, f"{fname}: expected scenario REF only"
         assert set(df["year"]) <= set(YEARS), f"{fname}: unexpected years"
+        drop = df["commodity"].isin(excluded)
+        if drop.any():
+            print(f"{fname}: {drop.sum()} rows dropped for excluded groups {sorted(EXCLUDE_GROUPS)}")
+            df = df[~drop].copy()
         all_regions |= set(df["region"])
         all_commodities |= set(df["commodity"])
         drop = df["impactparameter"].isin(CLIP_AT_ZERO) & df["region"].isin(HUNGER_NO_DATA)
         if drop.any():
             print(f"{fname}: {drop.sum()} risk-of-hunger rows dropped for {sorted(HUNGER_NO_DATA)}")
+            df = df[~drop].copy()
+        keys = list(zip(df["impactparameter"], df["region"], df["commodity"]))
+        drop = pd.Series([k in SERIES_NO_DATA for k in keys], index=df.index)
+        if drop.any():
+            print(f"{fname}: {drop.sum()} rows dropped for {sorted(set(k for k in keys if k in SERIES_NO_DATA))}")
             df = df[~drop].copy()
         neg = df["impactparameter"].isin(CLIP_AT_ZERO) & (df["value"] < 0)
         if neg.any():

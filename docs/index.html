@@ -62,12 +62,18 @@
         <label class="filter-label" for="year-select">Year (maps and rankings)</label>
         <select id="year-select"></select>
       </div>
-      <div class="filter">
-        <label class="filter-label" for="scale-select">Line charts show</label>
+      <!-- (i) button explains values vs. index (R37); text in config.js (indexInfo). -->
+      <div class="filter" id="scale-filter">
+        <span class="filter-head">
+          <label class="filter-label" for="scale-select">Line charts show</label>
+          <button type="button" class="info-btn" id="scale-info-btn" aria-expanded="false" aria-controls="scale-info"
+            aria-label="What do Values and Index mean?">i</button>
+        </span>
         <select id="scale-select">
           <option value="values">Values</option>
           <option value="index">Index (2025 = 1)</option>
         </select>
+        <div class="info-pop" id="scale-info" hidden></div>
       </div>
       <ul class="chips" id="chips" aria-label="Selected regions and countries"></ul>
       <ul class="chips" id="com-chips" aria-label="Selected commodities"></ul>
@@ -86,7 +92,7 @@
         <li>Grey areas on maps have no data. Some IMPACT regions group several small countries and are shown in charts and tables but not on maps.</li>
         <li>Projections are model results under stated assumptions, not forecasts.</li>
       </ul>
-      <p class="attribution">Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-10-21.</p>
+      <p class="attribution">Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi and Nilam Prasai (IFPRI), 2026-10-22.</p>
     </footer>
   </div>
 </body>

@@ -41,6 +41,7 @@
   const REG = new Map(), COM = new Map(), ISO2REG = new Map();
   const DATA = {};
   let renderToken = 0, comPickerTab = null, lastWidth = 0;
+  let refocus = null;               // id of a control to focus again after a redraw (map carousel)
 
   // ------------------------------------------------------------- helpers ----
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -202,6 +203,29 @@
 
   function buildScaleSelect() {
     $("#scale-select").addEventListener("change", (e) => { state.index = e.target.value === "index"; render(); });
+    buildInfo($("#scale-info-btn"), $("#scale-info"), C.indexInfo);
+  }
+
+  // (i) button with a short explanation (R37): shown while hovering, or kept open by a
+  // click / Enter until a second click, Escape or a click elsewhere.
+  function buildInfo(btn, pop, paras) {
+    pop.replaceChildren(...paras.map((t) => { const p = document.createElement("p"); p.textContent = t; return p; }));
+    let pinned = false;
+    const show = (on) => {
+      pop.hidden = !on; btn.setAttribute("aria-expanded", String(on));
+      if (!on) return;
+      // Keep the box inside the window when the filter sits near the right edge.
+      pop.style.left = "0px";
+      const over = pop.getBoundingClientRect().right - (document.documentElement.clientWidth - 8);
+      if (over > 0) pop.style.left = `${-over}px`;
+    };
+    btn.addEventListener("click", () => { pinned = !pinned; show(pinned); });
+    btn.addEventListener("mouseenter", () => show(true));
+    btn.addEventListener("mouseleave", () => { if (!pinned) show(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !pop.hidden) { pinned = false; show(false); } });
+    document.addEventListener("click", (e) => {
+      if (pinned && !btn.contains(e.target) && !pop.contains(e.target)) { pinned = false; show(false); }
+    });
   }
 
   // Shared behaviour of the two checkbox pickers (regions, commodities):
@@ -765,12 +789,48 @@
     table(c, ["Country", unit], vals.sort((a, b) => b.v - a.v).map((x) => [x.r.label, x.v]), `${state.year}`);
   }
 
+  // Map carousel (R39): with several commodities, the map shows one at a time and the
+  // arrows, dots or Left/Right keys step through them (wrapping round). They set the same
+  // choice as "Map and rankings show", so the map and rankings always show one commodity.
+  function mapCarousel(key) {
+    const sel = state.commodity[key], n = sel.length, i = sel.indexOf(state.focus[key]);
+    if (n < 2) return undefined;
+    const go = (j, id) => { state.focus[key] = sel[(j + n) % n]; refocus = id; render(); };
+    const btn = (id, cls, text, aria, onClick) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.id = id; b.className = cls; b.textContent = text;
+      b.setAttribute("aria-label", aria); b.title = aria; b.addEventListener("click", onClick);
+      return b;
+    };
+    const nav = document.createElement("div");
+    nav.className = "carousel"; nav.setAttribute("role", "group"); nav.setAttribute("aria-label", C.mapCarousel.label);
+    const pos = document.createElement("span"); pos.className = "carousel-pos";
+    pos.textContent = `${comLabel(sel[i])} (${i + 1} of ${n})`;
+    const dots = document.createElement("span"); dots.className = "carousel-dots";
+    sel.forEach((id, j) => {
+      const d = btn(`map-dot-${j}`, "dot", "", `Show ${comLabel(id)}`, () => go(j, `map-dot-${j}`));
+      if (j === i) d.setAttribute("aria-current", "true");
+      dots.appendChild(d);
+    });
+    nav.append(
+      btn("map-prev", "btn carousel-arrow", "‹", `${C.mapCarousel.prev}: ${comLabel(sel[(i - 1 + n) % n])}`, () => go(i - 1, "map-prev")),
+      pos,
+      btn("map-next", "btn carousel-arrow", "›", `${C.mapCarousel.next}: ${comLabel(sel[(i + 1) % n])}`, () => go(i + 1, "map-next")),
+      dots);
+    nav.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(i - 1, "map-prev"); }
+      if (e.key === "ArrowRight") { e.preventDefault(); go(i + 1, "map-next"); }
+    });
+    return nav;
+  }
+
   // ---------------------------------------------------------- tab views -----
   const mapSub = (unit) => `${unit}. Grey: no data. Click a country to add it to the charts.`;
 
   function renderYield(ds) {
     const coms = state.commodity.yield, com = state.focus.yield, ind = state.indicator.yield, cl = comLabel(com);
-    const m = card("yield-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)), { wide: true, map: true });
+    const m = card("yield-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)),
+      { wide: true, map: true, controls: mapCarousel("yield") });
     // Group yields (e.g. Cereals) are IMPACT's own aggregates and are shown like crops (R29).
     mapChart(m, ds, ind, com);
     // Yield and area side by side (R12), one panel per commodity in each (R14).
@@ -784,7 +844,8 @@
 
   function renderProduction(ds) {
     const coms = state.commodity.production, com = state.focus.production, ind = state.indicator.production, cl = comLabel(com);
-    mapChart(card("prod-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)), { wide: true, map: true }), ds, ind, com);
+    mapChart(card("prod-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)),
+      { wide: true, map: true, controls: mapCarousel("production") }), ds, ind, com);
     // Line chart and production-vs-demand bars side by side (R12).
     regionLines(card("prod-line", `${pLabel(ind)}${comSuffix(coms)}`, lineSub(pUnit(ind))), ds, ind, coms,
       { zero: true, indexable: true });
@@ -838,7 +899,7 @@
     const coms = state.commodity.trade, com = state.focus.trade, cl = comLabel(com);
     mapChart(card("trade-map", `Net trade: ${cl}, ${state.year}`,
       `${pUnit("Net Trade")}. Blue: net exporter; red: net importer. Grey: no data. Click a country to add it to the charts.`,
-      { wide: true, map: true }), ds, "Net Trade", com, "diverging");
+      { wide: true, map: true, controls: mapCarousel("trade") }), ds, "Net Trade", com, "diverging");
     worldPrices(card("price-line", `World price${comSuffix(coms)}`, lineSub(pUnit("World Price"))), ds, coms);
     priceChange(card("price-change", `Change in world prices, 2025 to ${state.year}`,
       `% change. ${isItem(com) ? META.groups[COM.get(com).group] : "Food groups"}; ${cl} highlighted.`), ds, com);
@@ -1108,6 +1169,7 @@
     lastWidth = panel.clientWidth;
     try { tab.render(ds); equalizePairs(); }
     catch (e) { setStatus(`Something went wrong while drawing the charts: ${e.message}`); console.error(e); }
+    if (refocus) { const el = document.getElementById(refocus); if (el) el.focus({ preventScroll: true }); refocus = null; }
     writeHash();
   }
 

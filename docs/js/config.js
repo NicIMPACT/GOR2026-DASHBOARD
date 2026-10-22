@@ -65,6 +65,18 @@ window.GOR_CONFIG = {
   // Index view of line charts (request R15): each value divided by its 2025 value.
   indexLabel: "Index (2025 = 1)",
   indexNote: "Index (2025 = 1): each value divided by its 2025 value.",
+  // Shown by the (i) button next to "Line charts show" (R37), one paragraph per entry.
+  indexInfo: [
+    "Values: the projections in their own units, for example t/ha or thousand t.",
+    "Index (2025 = 1): each line is divided by its own 2025 value, so every line starts at 1. " +
+      "1.25 means 25% above 2025; 0.90 means 10% below. Use it to compare growth between regions " +
+      "or commodities of very different size.",
+    "The index changes line charts only. It is not used for the share of population at risk of hunger " +
+      "or for net trade, where values near or below zero make an index meaningless.",
+  ],
+
+  // Map carousel when several commodities are selected (R39).
+  mapCarousel: { label: "Commodity shown on the map", prev: "Previous commodity", next: "Next commodity" },
 
   defaults: {
     regions: ["CWANA", "ESA", "LAC", "SEA", "SA", "WCA"], // the six CG regions (R32)
