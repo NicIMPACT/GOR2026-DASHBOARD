@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Global Outlook Report 2026: food system projections to 2050</title>
+  <meta name="description" content="Interactive charts and maps of IFPRI IMPACT model projections, 2025-2050: yields, area, production, demand, prices, trade and food security.">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Plotly.js (MIT licence), pinned version, served from the jsDelivr CDN. -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js" defer></script>
+  <script src="js/config.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="viz-root">
+    <header class="site-header">
+      <div>
+        <h1>Global Outlook Report 2026: projections to 2050</h1>
+        <p class="lede">IFPRI IMPACT model, reference scenario. Choose regions or countries, one or more commodities and a year.</p>
+      </div>
+      <button type="button" id="theme-toggle" class="btn" aria-pressed="false">Dark mode</button>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Dashboard sections" id="tablist"></nav>
+
+    <section class="filters" aria-label="Filters" id="filters">
+      <div class="filter" id="region-filter">
+        <span class="filter-label" id="region-label">Regions and countries</span>
+        <div class="picker" id="region-picker">
+          <button type="button" class="btn picker-toggle" id="picker-toggle" aria-expanded="false" aria-controls="picker-panel" aria-describedby="region-label"></button>
+          <div class="picker-panel" id="picker-panel" hidden>
+            <label class="sr-only" for="picker-search">Search regions and countries</label>
+            <input type="search" id="picker-search" placeholder="Search, e.g. Kenya">
+            <p class="picker-note" id="picker-note" aria-live="polite"></p>
+            <div class="picker-list" id="picker-list"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Several commodities at once (request R14): same picker pattern as regions. -->
+      <div class="filter" id="commodity-filter">
+        <span class="filter-label" id="commodity-label">Commodities</span>
+        <div class="picker" id="commodity-picker">
+          <button type="button" class="btn picker-toggle" id="com-toggle" aria-expanded="false" aria-controls="com-panel" aria-describedby="commodity-label"></button>
+          <div class="picker-panel" id="com-panel" hidden>
+            <label class="sr-only" for="com-search">Search commodities</label>
+            <input type="search" id="com-search" placeholder="Search, e.g. Wheat">
+            <p class="picker-note" id="com-note" aria-live="polite"></p>
+            <div class="picker-list" id="com-list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="filter" id="focus-filter" hidden>
+        <label class="filter-label" for="focus-select">Map and rankings show</label>
+        <select id="focus-select"></select>
+      </div>
+      <div class="filter" id="indicator-filter">
+        <label class="filter-label" for="indicator-select">Indicator</label>
+        <select id="indicator-select"></select>
+      </div>
+      <div class="filter">
+        <label class="filter-label" for="year-select">Year (maps and rankings)</label>
+        <select id="year-select"></select>
+      </div>
+      <div class="filter">
+        <label class="filter-label" for="scale-select">Line charts show</label>
+        <select id="scale-select">
+          <option value="values">Values</option>
+          <option value="index">Index (2025 = 1)</option>
+        </select>
+      </div>
+      <ul class="chips" id="chips" aria-label="Selected regions and countries"></ul>
+      <ul class="chips" id="com-chips" aria-label="Selected commodities"></ul>
+    </section>
+
+    <main id="main" tabindex="-1">
+      <p class="status" id="status" role="status" aria-live="polite">Loading data…</p>
+      <div id="panel" role="tabpanel" class="grid"></div>
+    </main>
+
+    <footer class="site-footer">
+      <h2>About the data</h2>
+      <ul>
+        <li>Source: IFPRI IMPACT model projections for the Global Outlook Report 2026, reference scenario (REF), 2025–2050 in five-year steps.</li>
+        <li>Region and commodity names follow the current IMPACT nomenclature.</li>
+        <li>Grey areas on maps have no data. Some IMPACT regions group several small countries and are shown in charts and tables but not on maps.</li>
+        <li>Projections are model results under stated assumptions, not forecasts.</li>
+      </ul>
+      <p class="attribution">Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-10-21.</p>
+    </footer>
+  </div>
+</body>
+</html>
