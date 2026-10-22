@@ -68,6 +68,11 @@ Diary entries follow, newest first.
 ## 2026-10-22: aggregates not recomputed; China maize net trade and fodder removed; index info and map carousel (R34–R39)
 
 **Steps**
+- Resolved older to-dos with Nicola:
+  - the `j`/`c` IMPACT code prefixes do mean production activity vs. commodity (confirmed);
+  - the "Mmolluscs" typo in the commodity classification stays as it is;
+  - Nicola removed the `original files/` folder (raw extracts) from the project, so no read-me note is needed. The raw extracts remain at the Dropbox source; `CLAUDE.md`, `README.md` and the `build_data.py` header now point there;
+  - the GitHub repository exists (`NicIMPACT/GOR2026-DASHBOARD`, two commits from 2026-10-21) and Nicola has enabled GitHub Pages from `/docs`. Recorded in `CLAUDE.md`.
 - Nicola tested R12–R33 and confirmed they work; they are marked in the requests log.
 - Claude summarised the open question of recomputing the risk-of-hunger aggregates (below). Nicola decided not to recompute (R34).
 - Added the "Data modifications" section above (Nicola's request), so every change to IMPACT's values can be found quickly.
@@ -78,6 +83,7 @@ Diary entries follow, newest first.
   - Fodder and grass removed from the dashboard entirely (R38, M4): 5,328 rows dropped at build time, and the group is gone from the commodity picker.
   - A map carousel when two or more commodities are selected (R39).
 - Tested R37 and R39 by driving headless Edge through its DevTools protocol (a Python script using `websockets`): carousel arrows, wrap-around, dots, Left/Right keys, the "Map and rankings show" drop-down, keyboard focus after each step, scroll position, and the (i) button's hover, click, Escape and phone-width placement. Screenshots at 1,400 and 420 px; one-commodity views show no carousel.
+- Committed everything as `1e3f323` ("Dashboard R34-R39: data modifications, index info, map carousel"). Claude's push failed (`Permission denied (publickey)`: the SSH key isn't usable from Claude's shell), so Nicola is to push from their own terminal with `git push origin main`.
 
 **The question about the hunger aggregates (summary given to Nicola)**
 - Negative risk-of-hunger values are shown as 0 (R26). Aggregates are clipped at 0 too, but not recomputed. IMPACT sums countries *including* their negatives, so its totals are below the sum of the zeroed countries. In 2050:
@@ -99,9 +105,10 @@ Diary entries follow, newest first.
 - A reused browser profile restored the previous run's scroll position, which looked like a scroll jump. With a fresh profile per run the position stays at 0 through every carousel step. Leftover Edge processes had to be killed as a whole process tree.
 
 **Open to-dos**
+- Nicola: push commit `1e3f323` (and the memo update made after it), then check the live site with Ctrl+F5.
 - Nicola: test R34–R39 and mark them in the requests log; confirm the carousel should also drive the rankings (R39).
-- Base year of the constant-price USD for world prices.
-- Lasting treatment of Burundi and Eritrea's hunger values (M2, R31).
+- Base year of the constant-price USD for world prices (reminder was due today; not yet discussed).
+- Lasting treatment of Burundi and Eritrea's hunger values (M2, R31; reminder was due today; not yet discussed).
 - When the model issue behind China's maize net trade is fixed: get the new extract, remove the entry from `SERIES_NO_DATA`, rebuild, and update M3.
 - Map shapes for combined IMPACT regions (`MAP_MEMBERS`): revisit around 2026-10-23.
 - Copy the Stata cleaning script into the project folder.
