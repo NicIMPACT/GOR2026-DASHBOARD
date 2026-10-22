@@ -303,6 +303,19 @@
     $("#picker-note").textContent = full
       ? `You have selected the maximum of ${C.maxRegions}. Remove one to add another.` : "";
     renderChips($("#chips"), state.regions, regLabel, colorOf, (id) => toggleRegion(id, false), true);
+    // On the trade tab, World can't be added and its chip is faded (R33).
+    if (state.tab === "trade") {
+      for (const cb of $("#picker-list").querySelectorAll("input")) {
+        if (C.tradeExcluded.includes(cb.value) && !cb.checked) { cb.disabled = true; cb.parentElement.title = C.tradeExcludedNote; }
+      }
+      state.regions.forEach((id, i) => {
+        if (!C.tradeExcluded.includes(id)) return;
+        const chip = $("#chips").children[i];
+        chip.classList.add("chip-off"); chip.title = C.tradeExcludedNote;
+      });
+    } else {
+      for (const cb of $("#picker-list").querySelectorAll("input")) if (C.tradeExcluded.includes(cb.value)) cb.parentElement.title = "";
+    }
   }
 
   // At least one commodity stays selected; at most C.maxCommodities.
@@ -873,7 +886,11 @@
   // Small multiples: one area panel per region (columns), one block of rows per commodity.
   // Colour encodes the sign (exports/imports), as on the map, not the region (R13).
   function tradeAreas(c, ds, coms) {
-    const th = theme(), unit = pUnit("Net Trade"), regs = state.regions, nC = coms.length;
+    // World has no net trade (R33): skipped here but kept in the selection for other tabs.
+    const th = theme(), unit = pUnit("Net Trade"), nC = coms.length;
+    const regs = state.regions.filter((id) => !C.tradeExcluded.includes(id));
+    const skipped = state.regions.some((id) => C.tradeExcluded.includes(id)) ? [C.tradeExcludedNote] : [];
+    if (!regs.length) return empty(c, `${C.tradeExcludedNote} Add a region or country.`);
     const w = c.chart.clientWidth || 900;
     const cols = Math.min(regs.length, Math.max(2, Math.floor(w / 150)));
     const rowsPer = Math.ceil(regs.length / cols);
@@ -938,7 +955,7 @@
           hovertemplate: `<b>%{y:,.0f}</b> ${esc(unit)}<br>${esc(regLabel(id))}, %{x}<extra></extra>` });
       });
     });
-    missingNote(c, missing);
+    missingNote(c, missing, skipped);
     if (!allVals.length) return empty(c, "No data for the selected regions. Add another region or country.");
     c.chart.style.height = `${plotH + 38}px`;
     plot(c, data, layout);

@@ -37,6 +37,11 @@ window.GOR_CONFIG = {
   // Fixed map classes for share at risk, so the 5% goal is always a class edge.
   shareBins: [5, 10, 15, 25],
 
+  // Regions without net trade: exports and imports cancel out worldwide, so IMPACT has no
+  // World value (Nicola, R33). They stay selected but are skipped on the Prices & trade tab.
+  tradeExcluded: ["WLD"],
+  tradeExcludedNote: "World is not shown: net trade is zero worldwide, as exports and imports cancel out.",
+
   // Food groups for the calorie-composition chart. Each sums the IMPACT diet groups in
   // `codes`. Animal-source and aquatic foods are combined into one group (Nicola, R17);
   // "Foods" is capitalised to set it apart from the IMPACT ASF label. List order = stack
@@ -62,7 +67,7 @@ window.GOR_CONFIG = {
   indexNote: "Index (2025 = 1): each value divided by its 2025 value.",
 
   defaults: {
-    regions: ["WLD", "SA", "ESA", "WCA", "LAC"],
+    regions: ["CWANA", "ESA", "LAC", "SEA", "SA", "WCA"], // the six CG regions (R32)
     year: 2050,
     commodity: { yield: ["Maize"], production: ["CER"], trade: ["Maize"] }, // lists: several allowed (R14)
   },

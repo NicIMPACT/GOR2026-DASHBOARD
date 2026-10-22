@@ -97,6 +97,7 @@ select { min-width: 12rem; }
   border: 1px solid var(--border); border-radius: 999px; padding: 2px 4px 2px 10px;
 }
 .chips:empty, .chips[hidden] { display: none; }
+.chip.chip-off { opacity: 0.5; } /* selected, but not shown on this tab (World on trade, R33) */
 .chip .key { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
 .chip button { font: inherit; background: none; border: none; color: var(--text-secondary); cursor: pointer; border-radius: 999px; width: 28px; height: 28px; }
 .chip button:hover { background: var(--grid); color: var(--text-primary); }
