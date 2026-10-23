@@ -125,7 +125,7 @@ select { min-width: 12rem; }
 .card-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 8px; font-size: 0.9rem; color: var(--text-secondary); }
 .card-controls label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .card-controls input { width: 18px; height: 18px; margin: 0; }
-/* Map carousel when several commodities are selected (R39). */
+/* Map and ranking carousels when several commodities are selected (R39, R41). */
 .carousel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 8px; }
 .carousel-arrow { font-size: 1.3rem; line-height: 1; padding: 4px 12px; min-width: 44px; }
 .carousel-pos { font-weight: 600; min-width: 11rem; text-align: center; }

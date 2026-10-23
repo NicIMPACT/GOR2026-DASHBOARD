@@ -28,11 +28,10 @@
     tab: "yield",
     regions: [...C.defaults.regions],
     year: C.defaults.year,
-    // Selected commodities per tab (R14), the one shown in the rankings ("Map and rankings
-    // show") and the one shown on the map, which the carousel moves on its own (R40).
+    // Selected commodities per tab (R14) and the one shown on the map and rankings, set by
+    // "Map and rankings show" or either carousel (R41).
     commodity: Object.fromEntries(Object.entries(C.defaults.commodity).map(([k, v]) => [k, [...v]])),
     focus: {},
-    mapFocus: {},
     index: false,        // line charts as an index, 2025 = 1 (R15)
     tradeShared: true,   // net-trade panels share one y scale per commodity (R13)
     indicator: { yield: "Total Yield", production: "Production", food: "Share Pop at risk of hunger" },
@@ -43,7 +42,7 @@
   const REG = new Map(), COM = new Map(), ISO2REG = new Map();
   const DATA = {};
   let renderToken = 0, comPickerTab = null, lastWidth = 0;
-  let refocus = null;               // id of a control to focus again after a redraw (map carousel)
+  let refocus = null;               // id of a control to focus again after a redraw (carousels)
 
   // ------------------------------------------------------------- helpers ----
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -151,7 +150,6 @@
       if (cs.length) state.commodity[tab.commodityKey] = cs;
     }
     if (h.get("f") && tab.commodityKey) state.focus[tab.commodityKey] = h.get("f");
-    if (h.get("m") && tab.commodityKey) state.mapFocus[tab.commodityKey] = h.get("m");
     if (h.get("i") && tab.indicators && tab.indicators.includes(h.get("i"))) state.indicator[tab.id] = h.get("i");
     state.index = h.get("ix") === "1";
     state.tradeShared = h.get("ts") !== "0";
@@ -163,8 +161,6 @@
       const cs = state.commodity[tab.commodityKey];
       h.set("c", cs.join("|"));
       if (cs.length > 1) h.set("f", state.focus[tab.commodityKey]);
-      if (cs.length > 1 && state.mapFocus[tab.commodityKey] !== state.focus[tab.commodityKey])
-        h.set("m", state.mapFocus[tab.commodityKey]);
     }
     if (tab.indicators) h.set("i", state.indicator[tab.id]);
     if (state.index) h.set("ix", "1");
@@ -387,7 +383,6 @@
     if (!sel.length) sel = [groups.find((g) => g.ids.length).ids[0]];
     state.commodity[key] = sel;
     if (!sel.includes(state.focus[key])) state.focus[key] = sel[0];
-    if (!sel.includes(state.mapFocus[key])) state.mapFocus[key] = state.focus[key];
 
     const full = syncChecks($("#com-list"), sel, C.maxCommodities);
     $("#com-toggle").textContent = sel.length === 1 ? comLabel(sel[0]) : `${sel.length} selected (up to ${C.maxCommodities})`;
@@ -401,8 +396,7 @@
       $("#focus-filter").hidden = false;
       fsel.replaceChildren(...sel.map((id) => new Option(comLabel(id), id)));
       fsel.value = state.focus[key];
-      // The drop-down sets the rankings and brings the map along; the carousel moves the map only (R40).
-      fsel.onchange = () => { state.focus[key] = state.mapFocus[key] = fsel.value; render(); };
+      fsel.onchange = () => { state.focus[key] = fsel.value; render(); };
     }
   }
 
@@ -796,13 +790,14 @@
     table(c, ["Country", unit], vals.sort((a, b) => b.v - a.v).map((x) => [x.r.label, x.v]), `${state.year}`);
   }
 
-  // Map carousel (R39): with several commodities, the map shows one at a time and the
-  // arrows, dots or Left/Right keys step through them (wrapping round). They move the map
-  // only; the rankings keep the commodity chosen in "Map and rankings show" (R40).
-  function mapCarousel(key) {
-    const sel = state.commodity[key], n = sel.length, i = sel.indexOf(state.mapFocus[key]);
+  // Commodity carousel (R39, R41): with several commodities, the map and the ranking show one
+  // at a time and the arrows, dots or Left/Right keys step through them (wrapping round).
+  // Both carousels set the same choice as "Map and rankings show", so the map and the
+  // ranking always show the same commodity. `pre` keeps the button ids unique per carousel.
+  function carousel(key, pre, label) {
+    const sel = state.commodity[key], n = sel.length, i = sel.indexOf(state.focus[key]);
     if (n < 2) return undefined;
-    const go = (j, id) => { state.mapFocus[key] = sel[(j + n) % n]; refocus = id; render(); };
+    const go = (j, id) => { state.focus[key] = sel[(j + n) % n]; refocus = id; render(); };
     const btn = (id, cls, text, aria, onClick) => {
       const b = document.createElement("button");
       b.type = "button"; b.id = id; b.className = cls; b.textContent = text;
@@ -810,23 +805,23 @@
       return b;
     };
     const nav = document.createElement("div");
-    nav.className = "carousel"; nav.setAttribute("role", "group"); nav.setAttribute("aria-label", C.mapCarousel.label);
+    nav.className = "carousel"; nav.setAttribute("role", "group"); nav.setAttribute("aria-label", label);
     const pos = document.createElement("span"); pos.className = "carousel-pos";
     pos.textContent = `${comLabel(sel[i])} (${i + 1} of ${n})`;
     const dots = document.createElement("span"); dots.className = "carousel-dots";
     sel.forEach((id, j) => {
-      const d = btn(`map-dot-${j}`, "dot", "", `Show ${comLabel(id)}`, () => go(j, `map-dot-${j}`));
+      const d = btn(`${pre}-dot-${j}`, "dot", "", `Show ${comLabel(id)}`, () => go(j, `${pre}-dot-${j}`));
       if (j === i) d.setAttribute("aria-current", "true");
       dots.appendChild(d);
     });
     nav.append(
-      btn("map-prev", "btn carousel-arrow", "‹", `${C.mapCarousel.prev}: ${comLabel(sel[(i - 1 + n) % n])}`, () => go(i - 1, "map-prev")),
+      btn(`${pre}-prev`, "btn carousel-arrow", "‹", `${C.carousel.prev}: ${comLabel(sel[(i - 1 + n) % n])}`, () => go(i - 1, `${pre}-prev`)),
       pos,
-      btn("map-next", "btn carousel-arrow", "›", `${C.mapCarousel.next}: ${comLabel(sel[(i + 1) % n])}`, () => go(i + 1, "map-next")),
+      btn(`${pre}-next`, "btn carousel-arrow", "›", `${C.carousel.next}: ${comLabel(sel[(i + 1) % n])}`, () => go(i + 1, `${pre}-next`)),
       dots);
     nav.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") { e.preventDefault(); go(i - 1, "map-prev"); }
-      if (e.key === "ArrowRight") { e.preventDefault(); go(i + 1, "map-next"); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(i - 1, `${pre}-prev`); }
+      if (e.key === "ArrowRight") { e.preventDefault(); go(i + 1, `${pre}-next`); }
     });
     return nav;
   }
@@ -836,31 +831,31 @@
 
   function renderYield(ds) {
     const coms = state.commodity.yield, com = state.focus.yield, ind = state.indicator.yield, cl = comLabel(com);
-    const mcom = state.mapFocus.yield;
-    const m = card("yield-map", `${pLabel(ind)}: ${comLabel(mcom)}, ${state.year}`, mapSub(pUnit(ind)),
-      { wide: true, map: true, controls: mapCarousel("yield") });
+    const m = card("yield-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)),
+      { wide: true, map: true, controls: carousel("yield", "map", C.carousel.map) });
     // Group yields (e.g. Cereals) are IMPACT's own aggregates and are shown like crops (R29).
-    mapChart(m, ds, ind, mcom);
+    mapChart(m, ds, ind, com);
     // Yield and area side by side (R12), one panel per commodity in each (R14).
     regionLines(card("yield-line", `Yield${comSuffix(coms)}`, lineSub(pUnit("Total Yield"))), ds, "Total Yield", coms,
       { indexable: true });
     regionLines(card("area-line", `Area${comSuffix(coms)}`, lineSub(pUnit("Total Area"))), ds, "Total Area", coms,
       { indexable: true });
-    const r = card("yield-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind), { wide: true });
+    const r = card("yield-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind),
+      { wide: true, controls: carousel("yield", "rank", C.carousel.rank) });
     ranking(r, ds, ind, com);
   }
 
   function renderProduction(ds) {
     const coms = state.commodity.production, com = state.focus.production, ind = state.indicator.production, cl = comLabel(com);
-    const mcom = state.mapFocus.production;
-    mapChart(card("prod-map", `${pLabel(ind)}: ${comLabel(mcom)}, ${state.year}`, mapSub(pUnit(ind)),
-      { wide: true, map: true, controls: mapCarousel("production") }), ds, ind, mcom);
+    mapChart(card("prod-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)),
+      { wide: true, map: true, controls: carousel("production", "map", C.carousel.map) }), ds, ind, com);
     // Line chart and production-vs-demand bars side by side (R12).
     regionLines(card("prod-line", `${pLabel(ind)}${comSuffix(coms)}`, lineSub(pUnit(ind))), ds, ind, coms,
       { zero: true, indexable: true });
     prodVsDemand(card("prod-vs-demand", `Production and total demand${comSuffix(coms)}, ${state.year}`,
       pUnit("Production")), ds, coms);
-    ranking(card("prod-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind), { wide: true }),
+    ranking(card("prod-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind),
+      { wide: true, controls: carousel("production", "rank", C.carousel.rank) }),
       ds, ind, com);
   }
 
@@ -905,10 +900,10 @@
   }
 
   function renderTrade(ds) {
-    const coms = state.commodity.trade, com = state.focus.trade, cl = comLabel(com), mcom = state.mapFocus.trade;
-    mapChart(card("trade-map", `Net trade: ${comLabel(mcom)}, ${state.year}`,
+    const coms = state.commodity.trade, com = state.focus.trade, cl = comLabel(com);
+    mapChart(card("trade-map", `Net trade: ${cl}, ${state.year}`,
       `${pUnit("Net Trade")}. Blue: net exporter; red: net importer. Grey: no data. Click a country to add it to the charts.`,
-      { wide: true, map: true, controls: mapCarousel("trade") }), ds, "Net Trade", mcom, "diverging");
+      { wide: true, map: true, controls: carousel("trade", "map", C.carousel.map) }), ds, "Net Trade", com, "diverging");
     worldPrices(card("price-line", `World price${comSuffix(coms)}`, lineSub(pUnit("World Price"))), ds, coms);
     priceChange(card("price-change", `Change in world prices, 2025 to ${state.year}`,
       `% change. ${isItem(com) ? META.groups[COM.get(com).group] : "Food groups"}; ${cl} highlighted.`), ds, com);
@@ -923,7 +918,8 @@
       `${pUnit("Net Trade")}, 2025–2050. Blue area above zero: net exports; red area below zero: net imports.`,
       { wide: true, controls: ctl }), ds, coms);
     ranking(card("trade-rank", `Largest net exporters and importers: ${cl}, ${state.year}`,
-      `${pUnit("Net Trade")}. Blue: net exporter; red: net importer.`, { wide: true }),
+      `${pUnit("Net Trade")}. Blue: net exporter; red: net importer.`,
+      { wide: true, controls: carousel("trade", "rank", C.carousel.rank) }),
       ds, "Net Trade", com, { diverging: true, n: 20 });
   }
 
@@ -1173,11 +1169,18 @@
     syncCommodity(tab, ds);
     setStatus("");
     const panel = $("#panel");
+    // Hold the panel's height while it is rebuilt, so the page doesn't shrink and jump back to
+    // the top when a control far down the page (e.g. the ranking carousel, R41) redraws it;
+    // then put the scroll position back, which the browser's scroll anchoring can shift.
+    const scrollY0 = window.scrollY;
+    panel.style.minHeight = `${panel.offsetHeight}px`;
     for (const el of panel.querySelectorAll(".js-plotly-plot")) Plotly.purge(el);
     panel.replaceChildren();
     lastWidth = panel.clientWidth;
     try { tab.render(ds); equalizePairs(); }
     catch (e) { setStatus(`Something went wrong while drawing the charts: ${e.message}`); console.error(e); }
+    panel.style.minHeight = "";
+    if (window.scrollY !== scrollY0) window.scrollTo(0, scrollY0);
     if (refocus) { const el = document.getElementById(refocus); if (el) el.focus({ preventScroll: true }); refocus = null; }
     writeHash();
   }

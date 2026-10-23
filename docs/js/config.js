@@ -75,8 +75,9 @@ window.GOR_CONFIG = {
       "or for net trade, where values near or below zero make an index meaningless.",
   ],
 
-  // Map carousel when several commodities are selected (R39).
-  mapCarousel: { label: "Commodity shown on the map", prev: "Previous commodity", next: "Next commodity" },
+  // Carousels above the map and the ranking when several commodities are selected (R39, R41).
+  carousel: { map: "Commodity shown on the map", rank: "Commodity shown in the ranking",
+    prev: "Previous commodity", next: "Next commodity" },
 
   defaults: {
     regions: ["CWANA", "ESA", "LAC", "SEA", "SA", "WCA"], // the six CG regions (R32)

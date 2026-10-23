@@ -13,6 +13,11 @@
 - **IMPACT's group yields and prices are proper aggregates.** The Cereals price, for example, is IMPACT's computed average across cereals, and can be shown. Never recompute group yields or prices from the individual crops: they can't simply be added or averaged.
 - **The metadata workbooks can change shape.** On 2026-10-21 the 8th column of the regional classification changed from continent to the CG6 full region names. The build script reads columns by position (the headers repeat by design), so check it whenever a workbook is updated.
 
+## Observations on IMPACT results
+
+- **China has no risk-of-hunger results (checked 2026-10-22).** The China "no data" on the share-at-risk map and charts comes from IMPACT's output, not from the dashboard. `Food_security_REF.csv` has no `Share Pop at risk of hunger` (or `Pop at risk of hunger`) rows for China, South Korea, Palestine, Swaziland or Other Southeast Asia, although all five have `Kcal pc` rows. The cleaned file matched the raw extract exactly (2026-10-20), so the gap is in the IMPACT extract itself. This is different from Burundi and Eritrea (M2) and China's maize net trade (M3), which the dashboard drops; it is therefore not in the "Data modifications" table.
+  - **Still unknown:** why IMPACT leaves these countries out (e.g. the hunger module isn't run for them, or the extract skips them), and whether IMPACT's SEA aggregate ("Southeast and East Asia", shown as reported per R34) includes China. Both are questions for the IMPACT team. Left as is for now (Nicola, 2026-10-22).
+
 ## Dashboard and tool quirks
 - **Charts placed side by side don't match by default.** Plotly sizes each chart's margins from its own tick labels and legend, so paired plots differed (e.g. area 529 px vs. yield 563 px wide), and a long legend squashed its plot. Equal sizes need explicit handling (`equalizePairs()` in `app.js`).
 - **Browsers keep serving old files.** After a data rebuild the browser showed the old region names until a hard refresh. Data files are now always re-checked with the server; after code changes, use Ctrl+F5.
