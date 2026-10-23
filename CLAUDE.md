@@ -29,7 +29,7 @@ The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, bran
   - There is one y-axis per chart, never a dual axis.
   - Map classes: quantiles in general, fixed classes for share at risk (5% is always a class edge), and blue/red around zero for net trade.
   - Yields and world prices for commodity groups and totals (e.g. `CER`, `AllC`) are shown like individual commodities. They are IMPACT's own, properly computed aggregates (Nicola, 2026-10-21, R29). Never compute group yields or prices in the dashboard; use only the values IMPACT provides.
-  - Several commodities (up to 6) are shown as small multiples, one panel per commodity, so colour always means region (R14). The map, rankings and price-change chart show one commodity, chosen with "Map and rankings show" or with the carousel above the map (arrows, dots, Left/Right keys; `mapCarousel()` in `app.js`, R39). Both set the same `state.focus`, so the map and rankings always agree.
+  - Several commodities (up to 6) are shown as small multiples, one panel per commodity, so colour always means region (R14). The rankings and price-change chart show one commodity, chosen with "Map and rankings show" (`state.focus`). The map has its own choice (`state.mapFocus`, URL `m=`): the carousel above it (arrows, dots, Left/Right keys; `mapCarousel()` in `app.js`, R39) moves the map only (Nicola, R40), and the drop-down sets both.
   - The (i) button next to "Line charts show" explains values vs. index (`indexInfo` in `config.js`, `buildInfo()` in `app.js`, R37). It opens on hover, stays open on click, and closes with Escape or a click elsewhere.
   - Net trade is drawn as area panels, one per region, coloured by sign (blue exports, red imports), not by region (R13). World has no net trade (exports and imports cancel out), so it is skipped on the trade tab but kept in the shared selection (`tradeExcluded`, R33).
   - The default selection is the six CG regions: CWANA, ESA, LAC, SEA, SA, WCA (`defaults.regions`, R32).
@@ -46,7 +46,7 @@ The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, bran
 ## Files
 
 - Raw IMPACT extracts (`Food security.csv`, `Prices_Trade.csv`, `Total_Production.csv`, with scenarios `REF` and `REF_NoCC`, reference without climate change) are **not in this folder**. Nicola removed the former `original files/` folder on 2026-10-22. They remain at the source: `IFPRI Dropbox\...\Global Futures 2026\GlobalOutlookReport_nc26\IMPACT_analysis_26\Extracted_update26\Data extracts for Nilam`.
-- Top-level `*_REF.csv`: cleaned in Stata (the Stata script is not in this folder). They keep only `REF` and drop the `productiontype` column. These are the files the dashboard uses. They were checked on 2026-10-20 and match the raw `REF` rows exactly.
+- Top-level `*_REF.csv`: cleaned by Nicola interactively in Stata, with no do-file (not tracked, by choice, 2026-10-22). They keep only `REF`, drop the `productiontype` column and rename `Value` to `value`. The production extract is split into `Production_Demand_REF.csv` and `Yield_Area_REF.csv`. These are the files the dashboard uses. They were checked on 2026-10-20 and match the raw `REF` rows exactly.
   - `Food_security_REF.csv`: `Kcal pc`, `Kcal pc by Commodity`, `Pop at risk of hunger`, `Share Pop at risk of hunger`
   - `Prices_Trade_REF.csv`: `Net Trade`, `World Price`
   - `Production_Demand_REF.csv`: `Total Demand`, `Food Demand`, `Production`

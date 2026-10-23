@@ -28,9 +28,11 @@
     tab: "yield",
     regions: [...C.defaults.regions],
     year: C.defaults.year,
-    // Selected commodities per tab (R14) and the one shown on the map and rankings.
+    // Selected commodities per tab (R14), the one shown in the rankings ("Map and rankings
+    // show") and the one shown on the map, which the carousel moves on its own (R40).
     commodity: Object.fromEntries(Object.entries(C.defaults.commodity).map(([k, v]) => [k, [...v]])),
     focus: {},
+    mapFocus: {},
     index: false,        // line charts as an index, 2025 = 1 (R15)
     tradeShared: true,   // net-trade panels share one y scale per commodity (R13)
     indicator: { yield: "Total Yield", production: "Production", food: "Share Pop at risk of hunger" },
@@ -149,6 +151,7 @@
       if (cs.length) state.commodity[tab.commodityKey] = cs;
     }
     if (h.get("f") && tab.commodityKey) state.focus[tab.commodityKey] = h.get("f");
+    if (h.get("m") && tab.commodityKey) state.mapFocus[tab.commodityKey] = h.get("m");
     if (h.get("i") && tab.indicators && tab.indicators.includes(h.get("i"))) state.indicator[tab.id] = h.get("i");
     state.index = h.get("ix") === "1";
     state.tradeShared = h.get("ts") !== "0";
@@ -160,6 +163,8 @@
       const cs = state.commodity[tab.commodityKey];
       h.set("c", cs.join("|"));
       if (cs.length > 1) h.set("f", state.focus[tab.commodityKey]);
+      if (cs.length > 1 && state.mapFocus[tab.commodityKey] !== state.focus[tab.commodityKey])
+        h.set("m", state.mapFocus[tab.commodityKey]);
     }
     if (tab.indicators) h.set("i", state.indicator[tab.id]);
     if (state.index) h.set("ix", "1");
@@ -382,6 +387,7 @@
     if (!sel.length) sel = [groups.find((g) => g.ids.length).ids[0]];
     state.commodity[key] = sel;
     if (!sel.includes(state.focus[key])) state.focus[key] = sel[0];
+    if (!sel.includes(state.mapFocus[key])) state.mapFocus[key] = state.focus[key];
 
     const full = syncChecks($("#com-list"), sel, C.maxCommodities);
     $("#com-toggle").textContent = sel.length === 1 ? comLabel(sel[0]) : `${sel.length} selected (up to ${C.maxCommodities})`;
@@ -395,7 +401,8 @@
       $("#focus-filter").hidden = false;
       fsel.replaceChildren(...sel.map((id) => new Option(comLabel(id), id)));
       fsel.value = state.focus[key];
-      fsel.onchange = () => { state.focus[key] = fsel.value; render(); };
+      // The drop-down sets the rankings and brings the map along; the carousel moves the map only (R40).
+      fsel.onchange = () => { state.focus[key] = state.mapFocus[key] = fsel.value; render(); };
     }
   }
 
@@ -790,12 +797,12 @@
   }
 
   // Map carousel (R39): with several commodities, the map shows one at a time and the
-  // arrows, dots or Left/Right keys step through them (wrapping round). They set the same
-  // choice as "Map and rankings show", so the map and rankings always show one commodity.
+  // arrows, dots or Left/Right keys step through them (wrapping round). They move the map
+  // only; the rankings keep the commodity chosen in "Map and rankings show" (R40).
   function mapCarousel(key) {
-    const sel = state.commodity[key], n = sel.length, i = sel.indexOf(state.focus[key]);
+    const sel = state.commodity[key], n = sel.length, i = sel.indexOf(state.mapFocus[key]);
     if (n < 2) return undefined;
-    const go = (j, id) => { state.focus[key] = sel[(j + n) % n]; refocus = id; render(); };
+    const go = (j, id) => { state.mapFocus[key] = sel[(j + n) % n]; refocus = id; render(); };
     const btn = (id, cls, text, aria, onClick) => {
       const b = document.createElement("button");
       b.type = "button"; b.id = id; b.className = cls; b.textContent = text;
@@ -829,10 +836,11 @@
 
   function renderYield(ds) {
     const coms = state.commodity.yield, com = state.focus.yield, ind = state.indicator.yield, cl = comLabel(com);
-    const m = card("yield-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)),
+    const mcom = state.mapFocus.yield;
+    const m = card("yield-map", `${pLabel(ind)}: ${comLabel(mcom)}, ${state.year}`, mapSub(pUnit(ind)),
       { wide: true, map: true, controls: mapCarousel("yield") });
     // Group yields (e.g. Cereals) are IMPACT's own aggregates and are shown like crops (R29).
-    mapChart(m, ds, ind, com);
+    mapChart(m, ds, ind, mcom);
     // Yield and area side by side (R12), one panel per commodity in each (R14).
     regionLines(card("yield-line", `Yield${comSuffix(coms)}`, lineSub(pUnit("Total Yield"))), ds, "Total Yield", coms,
       { indexable: true });
@@ -844,8 +852,9 @@
 
   function renderProduction(ds) {
     const coms = state.commodity.production, com = state.focus.production, ind = state.indicator.production, cl = comLabel(com);
-    mapChart(card("prod-map", `${pLabel(ind)}: ${cl}, ${state.year}`, mapSub(pUnit(ind)),
-      { wide: true, map: true, controls: mapCarousel("production") }), ds, ind, com);
+    const mcom = state.mapFocus.production;
+    mapChart(card("prod-map", `${pLabel(ind)}: ${comLabel(mcom)}, ${state.year}`, mapSub(pUnit(ind)),
+      { wide: true, map: true, controls: mapCarousel("production") }), ds, ind, mcom);
     // Line chart and production-vs-demand bars side by side (R12).
     regionLines(card("prod-line", `${pLabel(ind)}${comSuffix(coms)}`, lineSub(pUnit(ind))), ds, ind, coms,
       { zero: true, indexable: true });
@@ -896,10 +905,10 @@
   }
 
   function renderTrade(ds) {
-    const coms = state.commodity.trade, com = state.focus.trade, cl = comLabel(com);
-    mapChart(card("trade-map", `Net trade: ${cl}, ${state.year}`,
+    const coms = state.commodity.trade, com = state.focus.trade, cl = comLabel(com), mcom = state.mapFocus.trade;
+    mapChart(card("trade-map", `Net trade: ${comLabel(mcom)}, ${state.year}`,
       `${pUnit("Net Trade")}. Blue: net exporter; red: net importer. Grey: no data. Click a country to add it to the charts.`,
-      { wide: true, map: true, controls: mapCarousel("trade") }), ds, "Net Trade", com, "diverging");
+      { wide: true, map: true, controls: mapCarousel("trade") }), ds, "Net Trade", mcom, "diverging");
     worldPrices(card("price-line", `World price${comSuffix(coms)}`, lineSub(pUnit("World Price"))), ds, coms);
     priceChange(card("price-change", `Change in world prices, 2025 to ${state.year}`,
       `% change. ${isItem(com) ? META.groups[COM.get(com).group] : "Food groups"}; ${cl} highlighted.`), ds, com);
