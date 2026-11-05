@@ -11,6 +11,8 @@
 - **Clipping countries makes aggregates disagree with their parts.** Once negative countries are shown as 0 but IMPACT's totals are kept (R34), a user who adds up the countries gets more than the total shown (World +1.2% in 2050). This is the price of matching the published report; a recompute would also need population data that the extracts don't include.
 - **Implausible series can come from a model issue, not just artefacts.** China's maize net trade swings from a +31.5 million t net export in 2025 to −7.0 million t in 2040 and back to +6.4 million t in 2045. The team traced this to a model issue that is being fixed (R35). Large sign swings in a big trader's net trade are worth a check before publishing.
 - **IMPACT's group yields and prices are proper aggregates.** The Cereals price, for example, is IMPACT's computed average across cereals, and can be shown. Never recompute group yields or prices from the individual crops: they can't simply be added or averaged.
+- **Crops a country doesn't grow have no rows, not zeros.** In `Yield_Area_REF.csv` a country without the crop is simply absent (e.g. rice: 112 of 158 countries; wheat 114; maize 143; no zero yields or areas, checked 2026-11-05). Country distributions and counts therefore describe the growing countries only, and "no data" on a map often means "not grown".
+- **Crop area spans six orders of magnitude across countries.** For rice, country areas in 2025 run from about 0.02 to 49,000 thousand ha (wheat and maize are similar). On a normal scale a few large producers flatten everyone else, so spread charts need a log scale (the violin plot, R44). Yields span about one order of magnitude and read fine on a normal scale.
 - **The metadata workbooks can change shape.** On 2026-10-21 the 8th column of the regional classification changed from continent to the CG6 full region names. The build script reads columns by position (the headers repeat by design), so check it whenever a workbook is updated.
 
 ## Observations on IMPACT results
@@ -22,11 +24,12 @@
 - **Charts placed side by side don't match by default.** Plotly sizes each chart's margins from its own tick labels and legend, so paired plots differed (e.g. area 529 px vs. yield 563 px wide), and a long legend squashed its plot. Equal sizes need explicit handling (`equalizePairs()` in `app.js`).
 - **Browsers keep serving old files.** After a data rebuild the browser showed the old region names until a hard refresh. Data files are now always re-checked with the server; after code changes, use Ctrl+F5.
 - **Headless Edge is good for layout checks but not for dark mode.** Its screenshots and `--dump-dom` reliably show sizes, notes and errors, but dark mode needs checking by eye.
-- **Interactions can be tested headless, with care.** Driving Edge through its DevTools protocol (Python `websockets`) tests clicks, hover and keyboard. Three traps: `--window-size` is ignored (set the viewport with `Emulation.setDeviceMetricsOverride`), a reused profile restores old scroll positions, and Edge leaves child processes running unless the whole process tree is killed.
+- **Interactions can be tested headless, with care.** Driving Edge through its DevTools protocol (Python `websockets`) tests clicks, hover and keyboard. Four traps: `--window-size` is ignored (set the viewport with `Emulation.setDeviceMetricsOverride`); a reused profile restores old scroll positions; navigating to a URL that differs only after `#` doesn't reload the page (go to `about:blank` first); and Edge leaves child processes running unless the whole process tree is killed.
+- **Redrawing the page loses the scroll position.** The dashboard rebuilds the whole tab on every change, so a control far down the page (e.g. the ranking carousel) threw the user back to the top. A test from a control at the top of the page won't catch it. `render()` now holds the panel's height and restores the scroll position (R41). Test new controls from where they sit on the page.
 
 ## Git and GitHub
 
-**Pushing is done by Nicola.** Claude's `git push` failed with `Permission denied (publickey)`: the repository is connected over SSH, and the SSH key (`~/.ssh/id_ed25519`) wasn't usable from Claude's background shell, probably because it needs a passphrase or an agent that only Nicola's own session has. So Claude commits (or leaves changes for Nicola to commit) and Nicola pushes from their own terminal. This also means nothing goes public without Nicola seeing it first.
+**Committing and pushing are done by Nicola.** Claude's `git push` failed with `Permission denied (publickey)`: the repository is connected over SSH, and the SSH key (`~/.ssh/id_ed25519`) wasn't usable from Claude's background shell, probably because it needs a passphrase or an agent that only Nicola's own session has. Since 2026-10-22 Nicola also prefers to commit manually, so Claude leaves its changes uncommitted and lists what changed. This also means nothing goes public without Nicola seeing it first.
 
 **Nicola's question (2026-10-22):** once Claude has finished its changes, what sequence of commands sends the folder's content to GitHub? Claude's answer follows.
 
@@ -48,7 +51,7 @@ git push origin main
 
 *When Claude has already committed*
 
-If Claude says it has committed the changes but couldn't push, run only:
+If Claude has committed the changes (only when asked) but couldn't push, run only:
 
 ```
 git status
@@ -69,5 +72,28 @@ After a commit, `git status` says *"Your branch is ahead of 'origin/main' by 2 c
 
 If unsure, run `git status` first. It tells you where you are, and it often suggests the next command too.
 
+**Nicola's question (2026-11-03):** the repository is in Nicola's own GitHub account (`NicIMPACT`), which belongs to the IFPRI organization. Once the dashboard is finished, how is it moved to IFPRI's institutional GitHub account? Claude's answer follows.
+
+GitHub can **transfer** a repository from a personal account to an organization. History, issues, settings and the GitHub Pages configuration move with it.
+
+*Steps*
+
+1. **Check permissions first.** Transferring into an organization needs the right to create repositories there, which many organizations limit to owners. If Nicola doesn't have it, either an org owner grants it temporarily, or Nicola adds an org owner as admin on the repo and they do the transfer. Ask IFPRI's GitHub admins beforehand: they may also have rules on naming, visibility or which team owns the repo.
+2. **Transfer.** In `NicIMPACT/GOR2026-DASHBOARD`: Settings → General → Danger Zone → Transfer ownership. Pick the IFPRI organization and confirm with the repo name. The name can be kept or changed here.
+3. **Check Pages.** In the transferred repo, Settings → Pages: confirm it still deploys from `main`, `/docs`. A private repo needs a paid plan for Pages; if Pages shows as disabled, that's why.
+4. **Update the local copy** (optional, as GitHub redirects the old address). The repo is connected over SSH, so:
+   ```
+   git remote set-url origin git@github.com:<IFPRI-org-name>/GOR2026-DASHBOARD.git
+   ```
+
+*Things to know*
+
+- **The dashboard's public address changes, with no redirect.** Links to the repo itself redirect automatically, but the Pages site moves from `nicimpact.github.io/GOR2026-DASHBOARD/` to `<org-name>.github.io/GOR2026-DASHBOARD/`, and the old address stops working. Transfer **before** the link is shared anywhere (report, slides, emails).
+- **A custom domain avoids this.** An address like `gor2026.ifpri.org`, set in Pages settings, stays the same through any later move. IFPRI's IT/web team would need to add a DNS record.
+- **Don't create a new `GOR2026-DASHBOARD` repo in the personal account afterwards**, or the repo redirects break.
+- **The dashboard code needs no change.** Nothing in `docs/` hardcodes the site address; all paths are relative (checked 2026-11-03). Only the repository line in `CLAUDE.md` needs updating after the transfer; the dated mentions in `memos/progress.md` stay as a record. `README.md` already uses a `<user-or-org>` placeholder.
+
+*Alternative, not recommended:* an org owner creates an empty repo and Nicola pushes the local copy there (`git push --mirror`). History is kept, but Pages and other settings must be set up again, the old repo lingers, and nothing redirects.
+
 ---
-*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-10-22.*
+*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-11-03.*

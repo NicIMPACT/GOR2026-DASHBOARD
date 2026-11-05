@@ -840,9 +840,94 @@
       { indexable: true });
     regionLines(card("area-line", `Area${comSuffix(coms)}`, lineSub(pUnit("Total Area"))), ds, "Total Area", coms,
       { indexable: true });
+    // Ranking and violins share a row (R44); each has its own carousel so both charts start at
+    // the same height. All carousels set the same focus commodity (R41).
     const r = card("yield-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind),
-      { wide: true, controls: carousel("yield", "rank", C.carousel.rank) });
+      { controls: carousel("yield", "rank", C.carousel.rank) });
     ranking(r, ds, ind, com);
+    const yrs = state.year === YEARS[0] ? `${YEARS[0]}` : `${YEARS[0]} and ${state.year}`;
+    regionViolins(card("yield-violin", `${pLabel(ind)} across the countries of each region: ${cl}, ${yrs}`,
+      `${pUnit(ind)}${ind === "Total Area" ? ", log scale" : ""}. Each dot is a country; the wider the shape, the more ` +
+      `countries have values near that level. Lighter shape: ${YEARS[0]}.`,
+      { controls: carousel("yield", "violin", C.carousel.rank) }), ds, ind, com);
+  }
+
+  // Countries that make up an aggregate region, from the metadata (regional classification).
+  // EUR, FSU, NA and EAPhi sit in the same metadata column as the CG regions (cgregion).
+  function members(id) {
+    const r = REG.get(id), all = countries();
+    switch (r.type) {
+      case "world": return all;
+      case "development": return all.filter((c) => c.dev === id);
+      case "cgsix": return all.filter((c) => c.cgsix === id);
+      case "cgregion": case "otherregion": return all.filter((c) => c.cgregion === id);
+      case "income": return all.filter((c) => c.income === id);
+      default: return null; // a country: no distribution
+    }
+  }
+
+  // Violin plot (R44): for each selected region, the distribution of the country values in
+  // 2025 and in the year chosen at the top. Countries that don't grow the crop have no rows,
+  // so they are simply absent (no zeros). Only regions are drawn; countries are skipped.
+  // Area uses a log10 axis: the density is estimated on log values, which is what a log
+  // reading needs (Plotly's own log axis would estimate it on raw values).
+  function regionViolins(c, ds, param, com) {
+    const th = theme(), unit = pUnit(param), log = param === "Total Area";
+    const regs = state.regions.filter((id) => members(id));
+    if (!regs.length) return empty(c, C.violinNeedsRegion);
+    const years = [...new Set([YEARS[0], state.year])];
+    const data = [], rows = [], missing = [], few = [], all = [];
+    for (const id of regs) {
+      const pts = members(id).map((m) => ({ m, s: get(ds, param, m.id, com) }))
+        .filter((p) => p.s && years.every((yr) => Number.isFinite(p.s[YEARS.indexOf(yr)]) && (!log || p.s[YEARS.indexOf(yr)] > 0)));
+      if (!pts.length) { missing.push(regLabel(id)); continue; }
+      if (pts.length < C.violinMinCountries) few.push(regLabel(id));
+      const col = colorOf(id), dots = pts.length < C.violinMinCountries;
+      for (const p of pts) rows.push([regLabel(id), p.m.label, ...years.map((yr) => p.s[YEARS.indexOf(yr)])]);
+      years.forEach((yr) => {
+        const yi = YEARS.indexOf(yr), first = yr === YEARS[0] && years.length > 1, v = pts.map((p) => p.s[yi]);
+        all.push(...v);
+        data.push({
+          type: "violin", name: `${regLabel(id)}, ${yr}`, showlegend: false,
+          x: [pts.map(() => regAbbr(id)), pts.map(() => String(yr))],
+          y: log ? v.map(Math.log10) : v, text: pts.map((p) => p.m.label), customdata: v,
+          spanmode: "hard", scalemode: "width", width: 0.8,
+          line: { color: col, width: dots ? 0 : 1.5 }, fillcolor: dots ? "rgba(0,0,0,0)" : rgba(col, first ? 0.12 : 0.4),
+          // No box inside the violin: shape plus country dots is enough (Nicola, R46).
+          box: { visible: false },
+          meanline: { visible: false },
+          points: "all", pointpos: 0, jitter: 0.45,
+          marker: { size: 5, color: col, opacity: first ? 0.55 : 0.9, line: { color: th.surface, width: 1 } },
+          hoveron: "points",
+          hovertemplate: `<b>%{customdata:${d3fmt(decimals(v))}}</b> ${esc(unit)}<br>%{text}, ${yr}<extra></extra>`,
+        });
+      });
+    }
+    const skipped = state.regions.filter((id) => !members(id)).map(regLabel);
+    const notes = [];
+    if (skipped.length) notes.push(`Countries are not shown here (a distribution needs a region): ${skipped.join(", ")}.`);
+    if (few.length) notes.push(`Fewer than ${C.violinMinCountries} countries, so dots only: ${few.join(", ")}.`);
+    if (log) notes.push("Log scale: each gridline is 10 times the one below.");
+    missingNote(c, missing, notes);
+    if (!data.length) return empty(c, "No country data for the selected regions and commodity.");
+    const layout = baseLayout(th, { violinmode: "overlay", hovermode: "closest", showlegend: false, height: plotHeight(c) + 16 });
+    layout.xaxis.type = "multicategory"; layout.xaxis.showgrid = false; layout.xaxis.dividercolor = th.grid;
+    layout.xaxis.tickfont = { color: th.text2, size: 12 };
+    if (regs.length * years.length > 10) layout.xaxis.tickangle = -90;
+    layout.yaxis.title.text = unit; layout.yaxis.zeroline = false;
+    if (log) {
+      const lo = Math.floor(Math.log10(Math.min(...all))), hi = Math.ceil(Math.log10(Math.max(...all)));
+      const ks = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+      layout.yaxis.tickvals = ks; layout.yaxis.ticktext = ks.map((k) => fmt(10 ** k, Math.max(0, -k)));
+      layout.yaxis.range = [lo - 0.1, hi + 0.1];
+    } else {
+      layout.yaxis.tickformat = ",~r"; layout.yaxis.rangemode = "tozero";
+    }
+    c.chart.style.height = `${layout.height}px`;
+    plot(c, data, layout);
+    abbrevNote(c, regs.filter((id) => !missing.includes(regLabel(id))));
+    table(c, ["Region", "Country", ...years.map(String)], rows,
+      `Unit: ${unit}. Countries with data in ${years.join(" and ")}; a country can belong to several selected regions.`);
   }
 
   function renderProduction(ds) {
@@ -852,43 +937,51 @@
     // Line chart and production-vs-demand bars side by side (R12).
     regionLines(card("prod-line", `${pLabel(ind)}${comSuffix(coms)}`, lineSub(pUnit(ind))), ds, ind, coms,
       { zero: true, indexable: true });
-    prodVsDemand(card("prod-vs-demand", `Production and total demand${comSuffix(coms)}, ${state.year}`,
+    prodVsDemand(card("prod-vs-demand", `Production, total demand and food demand${comSuffix(coms)}, ${state.year}`,
       pUnit("Production")), ds, coms);
     ranking(card("prod-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind),
       { wide: true, controls: carousel("production", "rank", C.carousel.rank) }),
       ds, ind, com);
   }
 
-  // Two measures with the same unit side by side per region, one panel per commodity;
-  // neutral inks so the region colours used elsewhere keep their meaning.
+  // Three measures with the same unit side by side per region, one panel per commodity;
+  // neutral inks so the region colours used elsewhere keep their meaning. Food demand (R43) is
+  // part of total demand, so it shares total demand's grey, hatched.
+  const PVD = ["Production", "Total Demand", "Food Demand"];
   function prodVsDemand(c, ds, coms) {
     const th = theme(), yi = yearIdx(), unit = pUnit("Production"), multi = coms.length > 1;
     // Region codes on the axis, explained below the chart (R18).
     const cats = state.regions.map(regAbbr), rows = [], missing = [], vals = [];
     const per = coms.map((com) => {
-      const p = [], t = [];
+      const ys = PVD.map(() => []);
       for (const id of state.regions) {
-        const ps = get(ds, "Production", id, com), ts = get(ds, "Total Demand", id, com);
-        if (!ps && !ts) missing.push(multi ? `${regLabel(id)} (${comLabel(com)})` : regLabel(id));
-        p.push(ps ? ps[yi] : null); t.push(ts ? ts[yi] : null);
-        rows.push([...(multi ? [comLabel(com)] : []), regLabel(id), ps ? ps[yi] : null, ts ? ts[yi] : null]);
+        const v = PVD.map((p) => { const s = get(ds, p, id, com); return s ? s[yi] : null; });
+        if (v.every((x) => x == null)) missing.push(multi ? `${regLabel(id)} (${comLabel(com)})` : regLabel(id));
+        v.forEach((x, j) => ys[j].push(x));
+        rows.push([...(multi ? [comLabel(com)] : []), regLabel(id), ...v]);
       }
-      vals.push(...p, ...t);
-      return { com, p, t };
+      vals.push(...ys.flat());
+      return { com, ys };
     });
     missingNote(c, missing);
     if (!vals.some(Number.isFinite)) return empty(c, "No data for the selected regions.");
     const { layout, yNames, height } = stackLayout(c, th, coms.map((id) => (multi ? comLabel(id) : null)), true);
     const d = decimals(vals);
-    const geo = barGeometry(c.chart, cats.length, 2);
+    const geo = barGeometry(c.chart, cats.length, PVD.length);
     const demandInk = th.dark ? "#6b6a65" : "#a3a29b";
+    const markers = [
+      { color: th.text2 },
+      { color: demandInk },
+      { color: th.surface, line: { color: demandInk, width: 1.5 },
+        pattern: { shape: "/", fgcolor: demandInk, bgcolor: th.surface, size: 6, solidity: 0.45, fillmode: "replace" } },
+    ];
     const data = [];
     per.forEach((s, i) => {
-      const mk = (j, name, color, y) => Object.assign({
-        type: "bar", name, x: cats, y, marker: { color }, xaxis: "x", yaxis: yNames[i], legendgroup: name, showlegend: i === 0,
-        hovertemplate: `<b>%{y:${d3fmt(d)}}</b> ${esc(unit)}  ${esc(name)}<extra></extra>`,
-      }, geo(j));
-      data.push(mk(0, "Production", th.text2, s.p), mk(1, "Total demand", demandInk, s.t));
+      PVD.forEach((p, j) => data.push(Object.assign({
+        type: "bar", name: pLabel(p), x: cats, y: s.ys[j], marker: markers[j], xaxis: "x", yaxis: yNames[i],
+        legendgroup: p, showlegend: i === 0,
+        hovertemplate: `<b>%{y:${d3fmt(d)}}</b> ${esc(unit)}  ${esc(pLabel(p))}<extra></extra>`,
+      }, geo(j))));
       if (!multi) layout.yaxis.title.text = unit;
     });
     layout.barmode = "overlay"; layout.hovermode = "x unified";
@@ -896,7 +989,7 @@
     c.chart.style.height = `${height}px`;
     plot(c, data, layout);
     abbrevNote(c, state.regions);
-    table(c, [...(multi ? ["Commodity"] : []), "Region", "Production", "Total demand"], rows, `Unit: ${unit}; ${state.year}`);
+    table(c, [...(multi ? ["Commodity"] : []), "Region", ...PVD.map(pLabel)], rows, `Unit: ${unit}; ${state.year}`);
   }
 
   function renderTrade(ds) {

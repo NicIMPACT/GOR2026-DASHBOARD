@@ -47,6 +47,11 @@ This is a running list of Nicola's instructions for the dashboard and the status
 | R39 | 2026-10-22 | With more than one crop selected, make a map available for each crop, one at a time, in a carousel users can scroll through. | built 2026-10-22: carousel above the map on the yield, production and trade tabs (‹ / ›, a dot per commodity, Left/Right keys, wraps round), only when 2+ commodities are selected. It sets the same choice as "Map and rankings show", so rankings follow the map. Checked in headless Edge: stepping, wrap-around, dots, keys, keyboard focus kept, no scroll jump, phone width; **tested by Nicola 2026-10-22**. Link between carousel and rankings *superseded by R40* |
 | R40 | 2026-10-22 | The map carousel should move only the map, not the rankings. | built 2026-10-22: the map has its own commodity choice (`state.mapFocus`, URL `m=`). The carousel moves only the map. "Map and rankings show" sets the rankings (and the price-change highlight) and also brings the map to that commodity. Checked in headless Edge on the yield, production and trade tabs, including a reload from the shared URL; **tested by Nicola 2026-10-22**. *Superseded by R41* |
 | R41 | 2026-10-22 | With several crops selected, add a carousel to the ranking at the bottom of the yield & area, production & demand and prices & trade tabs (top 15 by yield, top 15 by production, largest net exporters and importers). Keep it in sync with the map carousel: moving either one moves both. | built 2026-10-22: a second carousel above each ranking, built by the same `carousel()` function as the map's. Both set one shared choice (`state.focus`), as does "Map and rankings show", so the map, the ranking and the price-change highlight always show the same commodity. The map's own choice from R40 (`mapFocus`, URL `m=`) is removed. Also fixed: any redraw triggered from far down the page threw the page back to the top; `render()` now keeps the panel's height and restores the scroll position. Checked in headless Edge on all three tabs: map ↔ ranking sync both ways, arrows, dots, Left/Right keys, drop-down, keyboard focus, scroll position kept, no carousel with one crop; **tested by Nicola 2026-10-22** |
+| R42 | 2026-10-23 | Idea: a query box where users ask in English and the dashboard shows the matching charts plus a short paragraph of observations. Can it be done, and what infrastructure would it need? | answered 2026-10-23 (see diary entry "idea, development of query box in natural language"); **parked**, nothing built |
+| R43 | 2026-11-05 | Production & demand tab: the production-vs-total-demand bar chart should also show food demand. | built 2026-11-05: three bars per region (production, total demand, food demand), still in neutral greys; food demand uses total demand's grey, hatched, as it is part of total demand; title, data table and CSV include it. Checked in headless Edge |
+| R44 | 2026-11-05 | Yield & area tab: the top-15 ranking takes only half the width. In the other half, a violin plot for the chosen yield or area: for each selected region, the distribution of the country values, for 2025 (fixed) and the year chosen at the top. Only for regions: with countries only, the plot is blank with a message saying it needs regions. | built 2026-11-05: `regionViolins()` in `app.js`. Country membership from the metadata (`members()`). Countries without the crop are absent, not zero. Area on a log scale; regions with fewer than 5 countries (`violinMinCountries`) shown as dots only; countries in a mixed selection skipped with a note; own carousel, synced with the map and ranking (R41). Checked in headless Edge (yield, area, countries only, mixed). Boxplot inside the violins *superseded by R46* |
+| R45 | 2026-11-05 | Start the dashboard on Rice instead of Maize. | built 2026-11-05: `defaults.commodity` in `config.js`, yield and trade tabs (production stays on Cereals). Shared links keep their own commodity. Checked in headless Edge |
+| R46 | 2026-11-05 | Remove the boxplot inside the violins (too much information), keep the country dots. | built 2026-11-05: box off; subtitle now explains the shape instead of the box. Checked in headless Edge |
 
 ## Data modifications
 
@@ -64,6 +69,145 @@ What users see: M1 and M2 are explained in a note on the hunger map, charts and 
 Not a data change, but related: World has no net trade in IMPACT, so it is skipped on the trade tab (R33, `tradeExcluded` in `config.js`).
 
 Diary entries follow, newest first.
+
+---
+
+## 2026-11-05: food demand bars, violin plots, Rice as default (R43–R46)
+
+**Steps**
+- R43: added food demand to the production-vs-demand bar chart (now three bars per region).
+- R44: on the Yield & area tab, the ranking now takes half the width; the other half has a new violin plot of country values within each selected region, for 2025 and the year chosen at the top.
+- R45: the dashboard opens on Rice instead of Maize (yield and trade tabs).
+- R46: after seeing it in the browser, Nicola asked to remove the boxplot inside each violin; the country dots stay.
+- Request numbers: Claude first cited R42–R44 in the code, but R42 was already the parked query-box idea. Renumbered to R43–R46 in code comments and here.
+
+**Decisions and why**
+- **Food demand hatched in total demand's grey (R43).** Bars that aren't regions stay neutral, so region colours keep their meaning (R1–R15 rules). A third grey would be hard to tell apart; the hatch also shows that food demand is part of total demand.
+- **Violin membership from the metadata, not IMPACT's aggregates (R44).** Each violin is drawn from the countries in the region, as classified in `regional classification.xlsx` (columns already in `meta.json`: `dev`, `cgsix`, `cgregion`, `income`). EUR, FSU, NA and EAPhi use the CG-region column. Nothing is recomputed: the plot shows country values only, so R34 is respected.
+- **Countries without the crop are left out, not counted as zero.** Countries that don't grow a crop have no rows in the data (checked: no zero yields or areas for wheat, rice, maize), so each violin describes the growing countries only.
+- **Area on a log scale.** Country areas span about 0.01 to 50,000 thousand ha; on a normal scale every region except SA and SEA flattens to a line. The density is computed on log10 values, with ticks labelled in real values, rather than using Plotly's log axis, which would compute it on raw values. Trade-off: log scales are harder to read, so a note explains them. Yield stays on a normal scale.
+- **Dots only below 5 countries.** A density shape from 2–4 values (NA has 2 countries; EAPhi and FSU have 4) suggests a spread the data can't support. Threshold in `violinMinCountries` (`config.js`).
+- **Only countries growing the crop in both years** go into a region's violins, so the 2025 and later shapes compare the same countries.
+- **A carousel on the violin card too.** With several crops selected, the ranking card has a carousel; without one on the violin card the two charts would start at different heights. Both set the same choice (R41).
+- **No boxplot (R46).** Nicola found the box plus shape plus dots too much. The median is no longer marked; Plotly can add a single median line if wanted.
+
+**Problems found and solved**
+- **"Download CSV" and "Show data table" showed on empty cards.** `empty()` set `hidden` on the toolbar, but the CSS `display: flex` overrode it. This was an older bug that affected every empty card. Fixed with `.card-tools[hidden] { display: none; }` in `style.css`.
+- **Headless screenshots from PowerShell.** Variable names are case-insensitive in PowerShell, so a loop variable `$s` overwrote the folder path `$S`. Renamed the variables.
+
+**Open to-dos**
+- Nicola to test R43–R46 in the browser and commit.
+- Optional: a median line inside the violins.
+- Optional: check the violin's log-scale area view with Nilam for readability.
+- Base year of the constant-price USD for world prices (still to discuss).
+- Map shapes for combined IMPACT regions (`MAP_MEMBERS`).
+
+---
+
+## 2026-11-03: question, moving the repository to IFPRI's GitHub organization
+
+**Steps**
+- Nicola asked how to move the repository from their own GitHub account (`NicIMPACT`, part of the IFPRI organization) to IFPRI's institutional account once the dashboard is finished.
+- Claude explained GitHub's repository transfer (Settings → Danger Zone → Transfer ownership). The full answer is in `memos/learnings.md`, section "Git and GitHub".
+- Claude checked the repo for hardcoded addresses: nothing in `docs/` refers to the site URL, so the transfer needs no code change. Only the repository line in `CLAUDE.md` will need updating afterwards.
+
+**Points to decide**
+- *When to transfer.* The GitHub Pages address changes with the transfer and the old one is not redirected, so it's best done before the dashboard link is shared publicly.
+- *Custom domain.* Whether IFPRI wants a stable address (e.g. `gor2026.ifpri.org`), which would need IFPRI's IT/web team.
+
+**Open to-dos**
+- Nicola to ask IFPRI's GitHub admins about permissions to transfer and any naming or visibility rules.
+- After the transfer: check Pages settings, update the local remote, and update the repository line in `CLAUDE.md`.
+
+---
+
+## 2026-10-23: idea, development of query box in natural language (R42, parked)
+
+**Nicola's question (verbatim)**
+
+> Is it possible to create a box where:
+> 1) the users could pose requests in English and the dashboard would display the results
+> 2) the answer would not only be the rendering of the various plots but it would also provide a short paragraph of observations on the data
+>
+> I assume this would need AI support. If that is the answer, can you explain what the needed infrastructure should be?
+
+Nicola can't follow up now and asked to record the question and Claude's full answer here. Nothing was built or decided.
+
+**Claude's answer (2026-10-23)**
+
+*Short answer.* Yes, and it needs an AI model (a large language model). The dashboard is already well suited to it: everything on screen is defined by the state in the URL hash (tab, regions, year, commodities, indicator), so the AI doesn't need to draw anything. It only has to turn an English question into one of those states; the existing code (`render()`) draws the charts.
+
+*How it would work: two steps, with all arithmetic kept out of the AI.*
+1. **Translate the question.** E.g. *"How does cereal yield in South Asia compare with West and Central Africa by 2050?"* The model returns a small, schema-checked object, e.g. `{tab: "yield", regions: ["SA","WCA"], commodities: ["CER"], indicator: "Total Yield", year: 2050}`. The browser checks it against `meta.json` and calls `render()`. If the question can't be answered from these data, the model says so instead of guessing.
+2. **Compute in the browser, then describe.** The browser pulls the exact numbers behind the charts and computes the changes, ranks and shares itself. Only that small table goes to the model, which writes 3–5 sentences using only those numbers.
+
+Why keep computation in the browser: the model never invents a value, and every figure in the paragraph can be traced to a chart. This matters for IFPRI's epistemic standards.
+
+*Infrastructure.* The one hard constraint is that **GitHub Pages can't keep a secret**: an API key put in the JavaScript would be public within days. So one small server-side piece is needed:
+
+| Piece | What it does | Typical choice |
+|---|---|---|
+| Static site (unchanged) | Charts, the query box, validating the returned state | GitHub Pages, as now |
+| Serverless proxy (about 50–100 lines) | Holds the API key, accepts requests only from the dashboard's address, limits requests per user, caps monthly spend, sends a fixed system prompt | Cloudflare Worker (free tier, simplest), Azure Function (fits CGIAR's Microsoft tenant), or AWS Lambda |
+| AI model | Translation and the paragraph | Claude through the Anthropic API, or through Microsoft Foundry if IFPRI prefers to buy and govern it inside Azure |
+| Fixed system prompt | Lists of regions, commodities and units, the known data caveats, and the writing rules | Built from `config.js` and `meta.json` |
+
+The data caveats must be in that prompt, or the paragraphs will misread the data: negative hunger values shown as 0 (M1), Burundi and Eritrea shown as no data (M2), China maize net trade removed (M3), IMPACT's aggregates not recomputed (R34).
+
+*Rough cost (list prices as of 2026-10; estimates, to be measured on real use).* Each question sends about 10–15k tokens (mostly the fixed prompt) and gets about 500 back:
+- Opus 5.5: about $0.07 per question (≈ $70 per 1,000 questions)
+- Sonnet 5.5: about $0.03 per question (≈ $35 per 1,000)
+- Haiku 5.5: under $0.01 per question (≈ $2 per 1,000)
+
+Prompt caching of the fixed prompt would lower these further.
+
+*Three options.*
+- **A. Live AI for both steps.** Most flexible, closest to what Nicola describes. Needs the proxy, a spending cap and ongoing monitoring. Paragraphs are generated on the fly and nobody reviews them.
+- **B. No live AI.** Paragraphs for each region × indicator × commodity are written in advance (by AI or by hand), reviewed by the team, and stored in the JSON; the query box is a simple keyword parser in JavaScript. No running cost, no backend, all text reviewed. But it handles free-form questions poorly, and multi-region comparisons have too many combinations to pre-write.
+- **C. Hybrid.** A cheap live model only translates the question (low risk, since its output is checked against the schema). The observations come from pre-reviewed text or fill-in-the-blank sentences built from the computed numbers. Keeps the natural-language box without unreviewed AI prose on an IFPRI product.
+
+Claude's suggestion: prototype **C** first; move to **A** only if the team is comfortable with generated text. The translation step brings most of the usability gain; the paragraph step carries most of the risk.
+
+*Issues to settle before building.*
+- **Epistemic standards.** Generated text could imply causes ("yields rise *because of*…"), overstate differences, or drift into policy advice. Needs strict writing rules (describe only, no causes, no recommendations, state uncertainty), a visible "AI-generated" label with the attribution line, and a test set of about 50 typical and tricky questions to check output before launch.
+- **Misuse.** Anyone can type anything, including attempts to override the instructions. Limit the model to dashboard questions; the proxy needs request limits and a hard monthly spending cap.
+- **Privacy.** Users' questions would go to a third-party service: add a short notice on the page, log as little as possible (preferably no IP addresses), never ask for personal information. The data itself is cleared for public release (R11), so sending it to the model is not an issue.
+- **Institutional sign-off.** A public AI-powered feature on an IFPRI product probably needs approval from communications and IT, and the API account should belong to IFPRI, not to an individual.
+
+**Open to-dos**
+- Parked until Nicola picks it up. Possible next steps Claude offered: sketch the proxy and the translation schema; draft the test question set; discuss options A/B/C with the team and with communications/IT.
+
+---
+
+## 2026-10-22 (second session): synced map and ranking carousels (R40–R41); open items sorted
+
+**Steps**
+- Reviewed where the previous session left off. The earlier push had gone through (`211994f`).
+- Closed the Stata to-do: Nicola cleaned the `*_REF.csv` files interactively in Stata, with no do-file, and it doesn't need to be tracked. The cleaning steps are now listed in `CLAUDE.md`.
+- Nicola tested R34–R39; all are marked in the requests log.
+- R40: Nicola asked that the map carousel move the map only. The map got its own commodity choice (`mapFocus`, URL `m=`). Tested by Nicola.
+- China's maize net trade fix (M3) is parked: Nicola will raise it when the model is fixed; no reminders until then.
+- Nicola asked why China shows "no data" for share at risk of hunger. The reason is IMPACT's output, not the dashboard: the extract has no risk-of-hunger rows (population or share) for China, South Korea, Palestine, Swaziland or Other Southeast Asia, though all five have calorie data. Left as is for now. Details and open questions in `memos/learnings.md`, section "Observations on IMPACT results" (a new section).
+- R41: a carousel above each ranking (top 15 by yield, top 15 by production, largest net exporters and importers), in sync with the map carousel. This replaced R40's separate map choice. Tested in headless Edge on all three tabs, then by Nicola.
+- Burundi and Eritrea (M2, R31): Nicola deferred the lasting decision. They stay "no data"; no reminders until Nicola raises it.
+- Git: Claude committed `ca23194` (R40 and memo updates) without asking first. Nicola then said that, for now, they prefer to commit and push manually. Nicola committed R41 as `eee5f7a` and pushed both commits.
+
+**Decisions and why**
+- **One shared commodity choice for the map and the ranking (R41, superseding R40).** R40 gave the map its own choice, so the carousel moved only the map. After using it, Nicola wanted the ranking to be browsable by crop too, with map and ranking always on the same crop. So the map carousel, the ranking carousel and the "Map and rankings show" drop-down now all set one value (`state.focus`); the separate map choice and the URL `m=` parameter are gone. One value is simpler, and the map and ranking can't disagree. On the trade tab the price-change highlight follows the same choice.
+- **The drop-down is kept for now.** It duplicates the carousels, but it is a quicker way to jump to a crop. Removing it would tidy the filter row; Nicola to decide (optional).
+- **Nicola commits and pushes manually (for now).** Claude leaves changes uncommitted and lists what changed.
+- **Burundi/Eritrea and China's maize trade are parked**, not dropped: both stay recorded (M2, M3), and Nicola will raise them when ready.
+
+**Problems found and solved**
+- **Page jumped to the top when the ranking carousel was clicked.** Every redraw empties the page panel before rebuilding it. For a moment the page is short, so the browser resets the scroll to the top. The map carousel never showed this because it sits at the top of the page; the same would have happened with the "Same scale" checkbox on the trade tab. Fix in `render()`: the panel keeps its height while it is rebuilt, and the scroll position is restored afterwards. Holding the height alone wasn't enough: the browser's scroll anchoring still shifted the page up by 300–400 px per click. Tested: the position stays exactly the same across three clicks on each tab.
+- **A test artefact.** In the headless test, navigating to a URL that differs only in the `#…` part doesn't reload the page, so the second and third tabs seemed not to change. Navigating to `about:blank` first fixed the test.
+
+**Open to-dos**
+- Base year of the constant-price USD for world prices (still to discuss).
+- Map shapes for combined IMPACT regions (`MAP_MEMBERS`): revisit 2026-10-23.
+- Optional: remove the "Map and rankings show" drop-down, now that the carousels do the same job.
+- Optional: ask the IMPACT team why China, South Korea, Palestine, Swaziland and Other Southeast Asia have no risk-of-hunger results, and whether the SEA aggregate includes China.
+- Parked, no reminders: Burundi and Eritrea's hunger values (M2, R31); China's maize net trade (M3, R35).
 
 ---
 
@@ -87,7 +231,6 @@ Diary entries follow, newest first.
 - Tested R37 and R39 by driving headless Edge through its DevTools protocol (a Python script using `websockets`): carousel arrows, wrap-around, dots, Left/Right keys, the "Map and rankings show" drop-down, keyboard focus after each step, scroll position, and the (i) button's hover, click, Escape and phone-width placement. Screenshots at 1,400 and 420 px; one-commodity views show no carousel.
 - Committed everything as `1e3f323` ("Dashboard R34-R39: data modifications, index info, map carousel"). Claude's push failed (`Permission denied (publickey)`: the SSH key isn't usable from Claude's shell), so Nicola is to push from their own terminal with `git push origin main`.
 - Nicola asked for the sequence of Git commands to send the folder's content to GitHub once Claude has finished its changes. Claude explained the steps (status, add, commit, push, plus checks and what to do if a push is rejected). At Nicola's request, the question and the full answer are in `memos/learnings.md`, section "Git and GitHub".
-- Nicola asked why China shows "no data" for share at risk of hunger. The reason is IMPACT's output, not the dashboard. The extract has no risk-of-hunger rows for China, South Korea, Palestine, Swaziland or Other Southeast Asia, though all five have calorie data. Left as is for now. Open questions for the IMPACT team: why these countries are missing, and whether the SEA aggregate includes China. Details in `memos/learnings.md`, section "Observations on IMPACT results".
 
 **The question about the hunger aggregates (summary given to Nicola)**
 - Negative risk-of-hunger values are shown as 0 (R26). Aggregates are clipped at 0 too, but not recomputed. IMPACT sums countries *including* their negatives, so its totals are below the sum of the zeroed countries. In 2050:
@@ -102,7 +245,7 @@ Diary entries follow, newest first.
 - **China's maize net trade dropped, not edited (R35).** It is removed at build time, like M2, so the source CSVs stay untouched and every view (map, panels, ranking, CSV download) is consistent. IMPACT's series shows China as a large net exporter in 2025 (+31.5 million t), swinging to −7.0 million t in 2040 and +6.4 million t in 2045. Reason (Nicola, 2026-10-22): the team found an issue in the model for this series and is working on it. The generic "No data for: China (Maize)" is enough for users; no extra note on the dashboard.
 - **(i) button rather than a note under the title (R37).** Nicola offered either. A permanent note would push the filter row down for every user; the button explains on demand. It opens on hover but also on click, so it works on phones and with the keyboard. The wording is in `indexInfo` (`config.js`) and includes a worked example (1.25 = 25% above 2025), because "2025 = 1" alone is abstract for a general audience.
 - **Fodder and grass dropped by group, at build time (R38).** `EXCLUDE_GROUPS = {"FORx"}` takes the member commodities from the metadata, so any future FORx commodity is excluded too. No total changes: in the metadata FORx has no `All` or sub-total.
-- **Carousel tied to "Map and rankings show" (R39).** The carousel sets the same choice as the drop-down, so the map and the rankings below always show the same commodity. The alternative, a carousel that moves the map only, would let the map and the ranking show different crops on the same screen. Claude proposed this; Nicola to confirm. The carousel redraws the tab on each step, like the drop-down, and puts keyboard focus back on the button pressed.
+- **Carousel tied to "Map and rankings show" (R39).** The carousel sets the same choice as the drop-down, so the map and the rankings below always show the same commodity. The alternative, a carousel that moves the map only, would let the map and the ranking show different crops on the same screen. Claude proposed this; Nicola to confirm (later changed by R40, then R41). The carousel redraws the tab on each step, like the drop-down, and puts keyboard focus back on the button pressed.
 
 **Problems found and solved**
 - Simulated mouse events on the (i) button at first did nothing. The test, not the button, was at fault: headless Edge driven over the DevTools protocol ignored `--window-size` and used a small viewport, so the button was off-screen. Setting the viewport with `Emulation.setDeviceMetricsOverride` fixed it.

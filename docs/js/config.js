@@ -75,6 +75,15 @@ window.GOR_CONFIG = {
       "or for net trade, where values near or below zero make an index meaningless.",
   ],
 
+  // Violin plot of country values within each selected region (R44), next to the ranking on
+  // the Yield & area tab. Regions with fewer countries than `violinMinCountries` show the
+  // countries as dots only: a density curve from 2-4 values would suggest a shape the data
+  // can't support. Area is drawn on a log scale (values span 0.01 to ~50,000 thousand ha).
+  violinMinCountries: 5,
+  violinNeedsRegion: "This chart is drawn only when at least one region is selected: it shows how the values " +
+    "of the countries within each region are spread. Add a region (for example a CGIAR region or an income group) " +
+    "with \"Regions and countries\" at the top.",
+
   // Carousels above the map and the ranking when several commodities are selected (R39, R41).
   carousel: { map: "Commodity shown on the map", rank: "Commodity shown in the ranking",
     prev: "Previous commodity", next: "Next commodity" },
@@ -82,7 +91,8 @@ window.GOR_CONFIG = {
   defaults: {
     regions: ["CWANA", "ESA", "LAC", "SEA", "SA", "WCA"], // the six CG regions (R32)
     year: 2050,
-    commodity: { yield: ["Maize"], production: ["CER"], trade: ["Maize"] }, // lists: several allowed (R14)
+    // Lists: several allowed (R14). Rice replaces Maize as the starting commodity (R45).
+    commodity: { yield: ["Rice"], production: ["CER"], trade: ["Rice"] },
   },
   maxRegions: 8, // one categorical colour per region; never a 9th generated hue
   maxCommodities: 6, // one small-multiple panel per commodity (R14)
