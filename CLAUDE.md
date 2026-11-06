@@ -27,6 +27,7 @@ The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, bran
   - JSON layout: `data[parameter][region][commodity] = [value per year]` for 2025–2050. World Price uses region `-`.
 - Design rules, from the dataviz skill and agreed in R1–R15 (see `memos/progress.md`):
   - Each selected region keeps a fixed colour slot and marker symbol for as long as it stays selected. The cap is 8 regions, so a 9th colour is never generated.
+  - Colours (R47, Nicola 2026-11-06): the CG regions always use ColorBrewer Dark2 in the order CWANA, ESA, LAC, SA, SEA, WCA, ROW (`series`/`regionSlots` in `config.js`). Other regions take grey first, then the slot of an unselected CG region. If that CG region is added later, it takes its colour back (`assignSlots()` in `app.js`). Food groups use ColorBrewer Set1 in the order ASF, CER, F&V, O&S, PUL, RTB, OTH (`foodGroupColors`), except RTB, which is a darker gold (`#e6c700`) instead of Set1's yellow, so it stays visible on white.
   - Series that are not regions (world price, production vs. demand) use neutral inks, so the region colours keep their meaning.
   - There is one y-axis per chart, never a dual axis.
   - Map classes: quantiles in general, fixed classes for share at risk (5% is always a class edge), and blue/red around zero for net trade.

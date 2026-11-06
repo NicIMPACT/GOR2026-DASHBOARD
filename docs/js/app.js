@@ -83,14 +83,19 @@
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   }
 
+  // CG regions always take their own slot (C.regionSlots, R47). Other regions keep the slot
+  // they got while they stay selected, taking the grey first, then the slot of a CG region
+  // that is not selected. If that CG region is selected later, it reclaims its slot and the
+  // other region moves to a free one. With the 8-region cap, a free slot always exists.
   function assignSlots() {
     for (const id of [...slots.keys()]) if (!state.regions.includes(id)) slots.delete(id);
+    const fixed = new Set(state.regions.filter((id) => id in C.regionSlots).map((id) => C.regionSlots[id]));
+    for (const [id, s] of [...slots]) if (!(id in C.regionSlots) && fixed.has(s)) slots.delete(id);
+    for (const id of state.regions) if (id in C.regionSlots) slots.set(id, C.regionSlots[id]);
     for (const id of state.regions) {
       if (slots.has(id)) continue;
       const used = new Set(slots.values());
-      let s = 0;
-      while (used.has(s)) s++;
-      slots.set(id, s);
+      slots.set(id, C.otherSlotOrder.find((s) => !used.has(s)));
     }
   }
 
@@ -1176,8 +1181,8 @@
     const regs = state.regions.filter((id) => ds.data[P][id]);
     missingNote(c, state.regions.filter((id) => !ds.data[P][id]).map(regLabel));
     if (!regs.length) return empty(c, "No data for the selected regions.");
-    const pal = C.series[th.dark ? "dark" : "light"];
-    const groups = C.kcalGroups.map((g) => ({ label: g.label || META.groups[g.codes[0]], codes: g.codes, color: pal[g.color] }));
+    const groups = C.kcalGroups.map((g) => ({ label: g.label || META.groups[g.codes[0]], codes: g.codes,
+      color: C.foodGroupColors[g.color] }));
     const years = [...new Set([YEARS[0], state.year])];
     const val = (id, g, yr) => {
       const yi = YEARS.indexOf(yr), parts = g.codes.map((code) => get(ds, P, id, code)).filter(Boolean);

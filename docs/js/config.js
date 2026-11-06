@@ -45,12 +45,20 @@ window.GOR_CONFIG = {
   // Food groups for the calorie-composition chart. Each sums the IMPACT diet groups in
   // `codes`. Animal-source and aquatic foods are combined into one group (Nicola, R17);
   // "Foods" is capitalised to set it apart from the IMPACT ASF label. List order = stack
-  // order from the bottom and legend order (R21); `color` is a fixed slot in `series`.
+  // order from the bottom and legend order (R21); `color` is a key of `foodGroupColors`.
   kcalGroups: [
-    { codes: ["ASF", "AQF"], label: "Animal-source Foods", color: 5 },
-    { codes: ["CER"], color: 0 }, { codes: ["F&V"], color: 3 }, { codes: ["O&S"], color: 4 },
-    { codes: ["PUL"], color: 2 }, { codes: ["RTB"], color: 1 }, { codes: ["OTH"], color: 6 },
+    { codes: ["ASF", "AQF"], label: "Animal-source Foods", color: "ASF" },
+    { codes: ["CER"], color: "CER" }, { codes: ["F&V"], color: "F&V" }, { codes: ["O&S"], color: "O&S" },
+    { codes: ["PUL"], color: "PUL" }, { codes: ["RTB"], color: "RTB" }, { codes: ["OTH"], color: "OTH" },
   ],
+  // Food-group colours (R47, Nicola 2026-11-06): ColorBrewer Set1, n = 7, assigned in the
+  // order ASF, CER, F&V, O&S, PUL, RTB, OTH. Same colours in light and dark mode.
+  // https://colorbrewer2.org/#type=qualitative&scheme=Set1&n=7
+  foodGroupColors: {
+    ASF: "#e41a1c", CER: "#377eb8", "F&V": "#4daf4a", "O&S": "#984ea3",
+    // RTB: Set1's yellow #ffff33 was hard to see on white; darker gold instead (Nicola, 2026-11-06).
+    PUL: "#ff7f00", RTB: "#e6c700", OTH: "#a65628",
+  },
 
   // Years shown in the population-at-risk bar chart (R19).
   popBarYears: [2025, 2035, 2050],
@@ -97,12 +105,18 @@ window.GOR_CONFIG = {
   maxRegions: 8, // one categorical colour per region; never a 9th generated hue
   maxCommodities: 6, // one small-multiple panel per commodity (R14)
 
-  // Categorical palette (dataviz skill reference palette, validated; fixed order).
-  // Marker symbols give a second, non-colour cue for each series.
+  // Region colours (R47, Nicola 2026-11-06): ColorBrewer Dark2, n = 7, fixed to the CG
+  // regions in the order CWANA, ESA, LAC, SA, SEA, WCA, ROW, so a CG region always has the
+  // same colour. Slot 7 is a neutral grey (Dark2's 8th colour; lighter in dark mode).
+  // Other regions (World, countries, income groups, ...) take the grey first, then any slot
+  // whose CG region is not selected; see assignSlots() in app.js. Same order as `symbols`.
+  // https://colorbrewer2.org/?type=qualitative&scheme=Dark2&n=7
   series: {
-    light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"],
-    dark:  ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"],
+    light: ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02", "#a6761d", "#666666"],
+    dark:  ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02", "#a6761d", "#9a9a9a"],
   },
+  regionSlots: { CWANA: 0, ESA: 1, LAC: 2, SA: 3, SEA: 4, WCA: 5, ROW: 6 },
+  otherSlotOrder: [7, 6, 5, 4, 3, 2, 1, 0], // grey first, then slots of unselected CG regions
   symbols: ["circle", "square", "diamond", "triangle-up", "x", "cross", "triangle-down", "star"],
 
   // Sequential (one hue, light -> dark) and diverging (blue <-> red) map ramps.

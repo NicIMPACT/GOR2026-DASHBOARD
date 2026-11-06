@@ -52,6 +52,7 @@ This is a running list of Nicola's instructions for the dashboard and the status
 | R44 | 2026-11-05 | Yield & area tab: the top-15 ranking takes only half the width. In the other half, a violin plot for the chosen yield or area: for each selected region, the distribution of the country values, for 2025 (fixed) and the year chosen at the top. Only for regions: with countries only, the plot is blank with a message saying it needs regions. | built 2026-11-05: `regionViolins()` in `app.js`. Country membership from the metadata (`members()`). Countries without the crop are absent, not zero. Area on a log scale; regions with fewer than 5 countries (`violinMinCountries`) shown as dots only; countries in a mixed selection skipped with a note; own carousel, synced with the map and ranking (R41). Checked in headless Edge (yield, area, countries only, mixed). Boxplot inside the violins *superseded by R46* |
 | R45 | 2026-11-05 | Start the dashboard on Rice instead of Maize. | built 2026-11-05: `defaults.commodity` in `config.js`, yield and trade tabs (production stays on Cereals). Shared links keep their own commodity. Checked in headless Edge |
 | R46 | 2026-11-05 | Remove the boxplot inside the violins (too much information), keep the country dots. | built 2026-11-05: box off; subtitle now explains the shape instead of the box. Checked in headless Edge |
+| R47 | 2026-11-06 | New colours. Food groups: ColorBrewer Set1 (n = 7) in the order ASF, CER, F&V, O&S, PUL, RTB, OTH. Regions: ColorBrewer Dark2 (n = 7) in the order CWANA, ESA, LAC, SA, SEA, WCA, ROW. | built 2026-11-06: `foodGroupColors`, `series` and `regionSlots` in `config.js`. CG regions now always keep their own colour. Other regions take grey first, then the colour of an unselected CG region, and give it back if that region is added (`assignSlots()` in `app.js`). Checked in headless Edge (food security and yield & area tabs, default selection). Roots, tubers & bananas changed from Set1's yellow to a darker gold (`#e6c700`) for contrast on white. Mixed selection, dark mode and the new gold **tested by Nicola 2026-11-06** |
 
 ## Data modifications
 
@@ -69,6 +70,32 @@ What users see: M1 and M2 are explained in a note on the hunger map, charts and 
 Not a data change, but related: World has no net trade in IMPACT, so it is skipped on the trade tab (R33, `tradeExcluded` in `config.js`).
 
 Diary entries follow, newest first.
+
+---
+
+## 2026-11-06: new colour palettes for food groups and regions (R47)
+
+**Steps**
+- Nicola asked for ColorBrewer palettes: Set1 for the food groups (ASF, CER, F&V, O&S, PUL, RTB, OTH, in that order) and Dark2 for the CG regions (CWANA, ESA, LAC, SA, SEA, WCA, ROW, in that order).
+- `config.js`: added `foodGroupColors` (Set1, by group code). `kcalGroups` now points to it by code instead of by slot number. `series` is now Dark2 plus grey as an 8th slot. Added `regionSlots` (the fixed CG-region slots) and `otherSlotOrder`.
+- `app.js`: `assignSlots()` now gives CG regions their fixed slot. The calorie chart reads `foodGroupColors`.
+- Checked in headless Edge: food security and yield & area tabs with the default six regions.
+
+**Decisions and why**
+- **CG regions have a fixed colour, not a "first come" slot.** Before, a region's colour depended on the order it was selected in. Now CWANA is always the same green, in the dashboard and, if the same palette is used, in the report's figures.
+- **Regions outside the seven (World, countries, income groups, EUR, …) take grey first, then the colour of a CG region that isn't selected.** The request did not cover them. A separate palette was the other option, but its colours would be hard to tell apart from Dark2's. If a CG region is added while another region holds its colour, the CG region takes it back and the other region moves to a free slot. This is the only case where a selected region changes colour, which breaks the earlier rule that a region keeps its colour while selected. With the 8-region cap and 8 slots, a free slot always exists.
+- **Same colours in light and dark mode.** ColorBrewer has no dark-mode versions. Only the grey is lighter in dark mode (`#9a9a9a` instead of `#666666`), so it stays visible on the dark background.
+- Marker symbols still follow the slot, so each CG region now also has a fixed symbol.
+
+**Problems found**
+- **Low contrast of two colours on the white background.** Set1's yellow (`#ffff33`, Roots, tubers & bananas) is hard to see. Dark2's gold (WCA, `#e6ab02`) is readable but light for thin lines. Applied as requested at first. After checking in the browser, Nicola chose a darker gold for RTB: `#e6c700` replaces `#ffff33` (solved, 2026-11-06). WCA's gold is unchanged.
+- The mixed-selection logic (countries and CG regions together) was traced by hand, not in the browser (Node is not installed here).
+
+**Open to-dos**
+- ~~Nicola to test R47 in the browser, including a mix of countries and CG regions~~ (done 2026-11-06: mixed selection and dark mode work). Commit.
+- ~~Decide whether to darken the RTB yellow~~ (done 2026-11-06: `#e6c700`).
+- Base year of the constant-price USD for world prices (still to discuss).
+- Map shapes for combined IMPACT regions (`MAP_MEMBERS`).
 
 ---
 
