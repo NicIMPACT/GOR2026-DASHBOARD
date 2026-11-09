@@ -99,8 +99,9 @@ window.GOR_CONFIG = {
   defaults: {
     regions: ["CWANA", "ESA", "LAC", "SEA", "SA", "WCA"], // the six CG regions (R32)
     year: 2050,
-    // Lists: several allowed (R14). Rice replaces Maize as the starting commodity (R45).
-    commodity: { yield: ["Rice"], production: ["CER"], trade: ["Rice"] },
+    // Lists: several allowed (R14). Rice replaces Maize as the starting commodity (R45),
+    // and Cereals on the production & demand tab too (R48), so every tab opens on Rice.
+    commodity: { yield: ["Rice"], production: ["Rice"], trade: ["Rice"] },
   },
   maxRegions: 8, // one categorical colour per region; never a 9th generated hue
   maxCommodities: 6, // one small-multiple panel per commodity (R14)
