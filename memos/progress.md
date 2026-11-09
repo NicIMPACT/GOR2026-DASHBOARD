@@ -54,6 +54,9 @@ This is a running list of Nicola's instructions for the dashboard and the status
 | R46 | 2026-11-05 | Remove the boxplot inside the violins (too much information), keep the country dots. | built 2026-11-05: box off; subtitle now explains the shape instead of the box. Checked in headless Edge |
 | R47 | 2026-11-06 | New colours. Food groups: ColorBrewer Set1 (n = 7) in the order ASF, CER, F&V, O&S, PUL, RTB, OTH. Regions: ColorBrewer Dark2 (n = 7) in the order CWANA, ESA, LAC, SA, SEA, WCA, ROW. | built 2026-11-06: `foodGroupColors`, `series` and `regionSlots` in `config.js`. CG regions now always keep their own colour. Other regions take grey first, then the colour of an unselected CG region, and give it back if that region is added (`assignSlots()` in `app.js`). Checked in headless Edge (food security and yield & area tabs, default selection). Roots, tubers & bananas changed from Set1's yellow to a darker gold (`#e6c700`) for contrast on white. Mixed selection, dark mode and the new gold **tested by Nicola 2026-11-06** |
 | R48 | 2026-11-09 | Production & demand tab: start on Rice too, instead of Cereals. | built 2026-11-09: `defaults.commodity.production` in `config.js`. Shared links keep their own commodity. Checked in headless Edge |
+| R49 | 2026-11-09 | (From a colleague of Nicola's) Add a line marking the median to the violin plot, labelled "median" if possible, otherwise explained in a note under the figure. | built 2026-11-09: a short dark-grey horizontal line on each violin (a `line-ew` marker, as Plotly only draws a median inside the box removed in R46); first drawn black (text colour, 2.5 px), changed the same day to dark grey (`--text-muted`: #6b6a65 light, #a3a29b dark mode; 2 px) because black overwhelmed the figure (Nicola); "Median" legend entry at the top right; subtitle adds "Grey line: median country value."; hover gives the value and the number of countries; one "Median (n countries)" row per region in the data table and CSV. Unweighted median of raw country values (log10 of it on the area chart). Checked in headless Edge; grey line **tested by Nicola 2026-11-09** |
+| R50 | 2026-11-09 | (From a colleague of Nicola's) Under all maps, add the caption "Illustrative map only. Boundaries only denote geographical coverage as it exists in IMPACT. The boundaries, names, and designations used in this publication do not imply official endorsement or acceptance by the authors, the International Food Policy Research Institute (IFPRI), or its partners and donors." | built 2026-11-09: `mapDisclaimer` in `config.js`, added by `mapChart()` (so all four tabs), in small italics directly under the map and its phone legend (`.map-caption` in `style.css`). Checked in headless Edge |
+| R51 | 2026-11-09 | (From a colleague of Nicola's) Regional yields in the line charts are area-weighted, but a single country shows its raw yield: where to say so? Nicola chose option B (see diary 2026-11-09), plus a line under the violins. Crop-group yields need no note: they are also total production / total area over the group's crops (Nicola). Follow-up the same day: the subtitle should only say that regional yields are area-weighted, nothing longer. | built 2026-11-09: `regionYieldNote` ("Regional yields are area-weighted.") appended to the yield line chart's subtitle only when at least one region is selected; first built with a longer sentence (production / area explanation), shortened at Nicola's request, which also keeps the subtitle on one line so the yield and area charts line up; `violinMedianNote` under the yield violins (unweighted median vs. area-weighted regional line). Checked in headless Edge with the default regions (both notes shown) and with Kenya + India only (neither shown) |
 
 ## Data modifications
 
@@ -71,6 +74,73 @@ What users see: M1 and M2 are explained in a note on the hunger map, charts and 
 Not a data change, but related: World has no net trade in IMPACT, so it is skipped on the trade tab (R33, `tradeExcluded` in `config.js`).
 
 Diary entries follow, newest first.
+
+---
+
+## 2026-11-09: violin median, map disclaimer, area-weighted yield note (R49–R51)
+
+**Steps**
+- A colleague of Nicola's sent three requests: a median line on the violins (R49), a disclaimer under every map (R50), and a question on where to say that regional yields are area-weighted (R51).
+- R49: `median()` helper and a median marker per violin in `regionViolins()` (`app.js`); `violinMedianLabel` in `config.js`; legend switched on for that one entry, placed above the plot at the right.
+- R50: `mapDisclaimer` in `config.js`; `mapChart()` inserts it below the map; `.map-caption` style.
+- R51: Claude offered four options (below); Nicola chose B plus a note under the violins. `regionYieldNote` and `violinMedianNote` in `config.js`; `renderYield()` and `regionViolins()` in `app.js`.
+- Footer attribution date updated to 2026-11-09.
+- Follow-up after Nicola saw it in the browser: the subtitle note shortened to "Regional yields are area-weighted." (R51), and the median line changed from black to dark grey (R49). Both re-checked in headless Edge (light mode only).
+- Checked in headless Edge: yield tab with the default six regions (median lines, legend, both notes, map caption) and with two countries only (no area-weighting note; violins show the "needs a region" message).
+
+**Options given for the area-weighted yield note (R51)**, kept in case we change it later:
+
+| Option | Pros | Cons |
+|---|---|---|
+| A. A fixed sentence in the yield chart subtitle (proposed wording: "For regions, yield is IMPACT's regional value: total production divided by total area, i.e. an area-weighted average of its countries. For countries, the national yield."; as built, B uses only "Regional yields are area-weighted.") | Simple; always visible; correct also when only countries are selected | Takes space even when no region is selected |
+| **B. The same sentence, only when at least one region is selected (chosen)** | Appears only when it matters | Text appears and disappears as the selection changes |
+| C. "(area-weighted)" after region names in the hover and table | Sits exactly where the values are read | Easy to miss; longer hover |
+| D. An (i) button on the yield card, like the values/index one (R37) | No clutter | Hidden behind a click |
+
+Claude also recommended a line under the violins, because their median is unweighted (each country counts once) while the regional yield line is area-weighted, so the ESA median, for example, can sit well away from the ESA line next to it. Nicola agreed.
+
+**Decisions and why**
+- **Median as a separate marker, not Plotly's box.** Plotly only draws the median as part of the inner box, which R46 removed as too busy. A short neutral line (no region colour, so it doesn't compete with them) keeps R46's clean look.
+- **Dark grey, not black (follow-up).** The first version used the text colour (near black, 2.5 px); Nicola found it overwhelmed the figure. Now the muted text grey at 2 px, which adapts to dark mode. Trade-off: on the darkest fills (e.g. SEA and WCA in 2050) the grey line stands out less; #52514e (`--text-secondary`) is a darker fallback if needed.
+- **Median on raw values**, not on log values for area: it then matches the value in the data table. For an odd count the two are identical; for an even count the difference is small.
+- **Median drawn also for regions with fewer than 5 countries** (dots only): a median of 2–4 values is still well defined, unlike a density shape.
+- **Map caption in the page, not in the Plotly image.** It is HTML text under the map, so the PNG export from Plotly's toolbar doesn't carry it. Say if the exported image needs it too.
+- **No note for crop-group yields** (e.g. Cereals): Nicola confirmed IMPACT computes them as total production / total area over all crops in the group, the same logic as the regional yields.
+
+- **Short subtitle note (follow-up).** Claude had read Nicola's remark "total production divided by total area" as applying to regional yields too and put it in the subtitle. Nicola clarified that it answered only the crop-group question; the subtitle should just say "Regional yields are area-weighted." Changed the same day.
+
+**Problems found**
+- With the first, long note the yield chart's subtitle ran to two lines while the area chart's had one, so the yield plot started about 20 px lower than the area plot beside it (plot areas still equal, R23). **Solved** by the shorter note: one line, charts aligned (checked at 1,000 and 1,400 px). In windows just above 700 px, where the cards are narrowest while still side by side, the subtitle could still wrap.
+
+**Open to-dos**
+- ~~Nicola to check the grey median line (R49), including dark mode~~ (done 2026-11-09: works).
+- Nicola (and the colleague) to check R50–R51 in the browser; commit.
+- Base year of the constant-price USD for world prices (still to discuss).
+- Map shapes for combined IMPACT regions (`MAP_MEMBERS`).
+
+---
+
+## 2026-11-09: Rice as default on the production & demand tab (R48); checking a push
+
+**Steps**
+- Nicola noticed that the production & demand tab still opened on Cereals. Claude checked: this matched R45 as built, which had only replaced Maize on the yield and trade tabs, and the production tab already started on Cereals.
+- R48: Nicola asked for Rice there too. `defaults.commodity.production` in `config.js` changed from `["CER"]` to `["Rice"]`; R45 marked as partly superseded; the defaults line in `CLAUDE.md` updated.
+- Checked in headless Edge (`#tab=production`): the map, line chart, production/demand bars and ranking all show Rice.
+- Nicola committed and pushed (`fa478ed`, "production and demand tab defaults to rice").
+- Nicola asked how to tell from the terminal whether a push worked. Answer added to `learnings.md` ("Git and GitHub").
+
+**Decisions and why**
+- **All three commodity tabs now open on Rice.** R45 left the production tab on Cereals only because that tab had not been on Maize. A single starting commodity across tabs is simpler for users. Shared links keep the commodity written in the link.
+
+**Problems found**
+- Right after the push, the live site still served the old `config.js` (`production: ["CER"]`). This is expected: GitHub Pages takes a few minutes to rebuild, and its cache can hold old files for up to about 10 minutes. Not re-checked, as Nicola didn't need it.
+- Claude could not confirm the push from its own shell: `git fetch` failed with `Permission denied (publickey)` (as before, the SSH key isn't available there), and the GitHub API didn't respond. The local `origin/main` pointing to `fa478ed` already showed the push had worked.
+
+**Open to-dos**
+- Nicola to check R48 on the live site (Ctrl+F5) once Pages has rebuilt.
+- Commit the memo updates (`learnings.md`, `progress.md`).
+- Base year of the constant-price USD for world prices (still to discuss).
+- Map shapes for combined IMPACT regions (`MAP_MEMBERS`).
 
 ---
 
@@ -125,7 +195,7 @@ Diary entries follow, newest first.
 
 **Open to-dos**
 - Nicola to test R43–R46 in the browser and commit.
-- Optional: a median line inside the violins.
+- ~~Optional: a median line inside the violins~~ (done 2026-11-09, R49).
 - Optional: check the violin's log-scale area view with Nilam for readability.
 - Base year of the constant-price USD for world prices (still to discuss).
 - Map shapes for combined IMPACT regions (`MAP_MEMBERS`).

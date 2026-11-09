@@ -91,6 +91,21 @@ window.GOR_CONFIG = {
   violinNeedsRegion: "This chart is drawn only when at least one region is selected: it shows how the values " +
     "of the countries within each region are spread. Add a region (for example a CGIAR region or an income group) " +
     "with \"Regions and countries\" at the top.",
+  // Median of the country values, drawn as a short dark-grey line on each violin (R49) and named
+  // in the legend. Unweighted: every country counts once, whatever its size.
+  violinMedianLabel: "Median",
+  // Note under the violins (R51): their median is unweighted, the regional yield line is not.
+  violinMedianNote: "The median is the middle country value, with every country counted once. It can differ from " +
+    "the regional yield in the line chart, which is weighted by area.",
+  // Added to the yield line chart's subtitle only when a region is selected (R51, option B).
+  // Kept to one short sentence (Nicola, 2026-11-09), so the subtitle stays on one line and the
+  // yield chart lines up with the area chart beside it.
+  regionYieldNote: "Regional yields are area-weighted.",
+
+  // Caption under every map (R50, wording supplied by Nicola's colleague, 2026-11-09).
+  mapDisclaimer: "Illustrative map only. Boundaries only denote geographical coverage as it exists in IMPACT. " +
+    "The boundaries, names, and designations used in this publication do not imply official endorsement or " +
+    "acceptance by the authors, the International Food Policy Research Institute (IFPRI), or its partners and donors.",
 
   // Carousels above the map and the ranking when several commodities are selected (R39, R41).
   carousel: { map: "Commodity shown on the map", rank: "Commodity shown in the ranking",

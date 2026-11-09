@@ -117,6 +117,11 @@
     return qs.map((q) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]);
   }
   const uniqAsc = (a) => [...new Set(a)].sort((x, y) => x - y);
+  // Median of an unsorted array (mean of the two middle values when the count is even).
+  function median(a) {
+    const s = [...a].sort((x, y) => x - y), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
 
   // Long region names break onto two lines in narrow panel titles.
   function wrapLabel(s, max = 18) {
@@ -788,6 +793,9 @@
       });
       c.chart.after(ul);
     }
+    // Map disclaimer (R50), directly below the map and its phone legend, above the notes.
+    const cap = document.createElement("p"); cap.className = "map-caption"; cap.textContent = C.mapDisclaimer;
+    c.msg.before(cap);
     c.chart.on("plotly_click", (ev) => {
       const id = ev.points && ev.points[0] && ISO2REG.get(ev.points[0].location);
       if (id) toggleRegion(id, !state.regions.includes(id));
@@ -841,7 +849,9 @@
     // Group yields (e.g. Cereals) are IMPACT's own aggregates and are shown like crops (R29).
     mapChart(m, ds, ind, com);
     // Yield and area side by side (R12), one panel per commodity in each (R14).
-    regionLines(card("yield-line", `Yield${comSuffix(coms)}`, lineSub(pUnit("Total Yield"))), ds, "Total Yield", coms,
+    // Area-weighting note only when a region is selected; countries show national yields (R51).
+    const yieldNote = state.regions.some((id) => members(id)) ? ` ${C.regionYieldNote}` : "";
+    regionLines(card("yield-line", `Yield${comSuffix(coms)}`, lineSub(pUnit("Total Yield")) + yieldNote), ds, "Total Yield", coms,
       { indexable: true });
     regionLines(card("area-line", `Area${comSuffix(coms)}`, lineSub(pUnit("Total Area"))), ds, "Total Area", coms,
       { indexable: true });
@@ -853,7 +863,7 @@
     const yrs = state.year === YEARS[0] ? `${YEARS[0]}` : `${YEARS[0]} and ${state.year}`;
     regionViolins(card("yield-violin", `${pLabel(ind)} across the countries of each region: ${cl}, ${yrs}`,
       `${pUnit(ind)}${ind === "Total Area" ? ", log scale" : ""}. Each dot is a country; the wider the shape, the more ` +
-      `countries have values near that level. Lighter shape: ${YEARS[0]}.`,
+      `countries have values near that level. Lighter shape: ${YEARS[0]}. Grey line: median country value.`,
       { controls: carousel("yield", "violin", C.carousel.rank) }), ds, ind, com);
   }
 
@@ -881,7 +891,10 @@
     const regs = state.regions.filter((id) => members(id));
     if (!regs.length) return empty(c, C.violinNeedsRegion);
     const years = [...new Set([YEARS[0], state.year])];
-    const data = [], rows = [], missing = [], few = [], all = [];
+    const data = [], rows = [], missing = [], few = [], all = [], medians = [];
+    // Median line length (R49): about half a violin slot, in px (line-ew marker size = length).
+    const slotPx = Math.max(40, (c.chart.clientWidth || 500) - 90) / (regs.length * years.length);
+    const medLen = clamp(slotPx * 0.5, 10, 44);
     for (const id of regs) {
       const pts = members(id).map((m) => ({ m, s: get(ds, param, m.id, com) }))
         .filter((p) => p.s && years.every((yr) => Number.isFinite(p.s[YEARS.indexOf(yr)]) && (!log || p.s[YEARS.indexOf(yr)] > 0)));
@@ -906,16 +919,38 @@
           hoveron: "points",
           hovertemplate: `<b>%{customdata:${d3fmt(decimals(v))}}</b> ${esc(unit)}<br>%{text}, ${yr}<extra></extra>`,
         });
+        // Median of the country values (R49): Plotly violins only draw a median inside the box,
+        // which R46 removed, so it is a separate marker. Computed on raw values (then log10 for
+        // area), so it matches the data table. Unweighted: each country counts once.
+        const med = median(v);
+        medians.push({ id, yr, med, n: v.length });
+        data.push({
+          type: "scatter", mode: "markers", name: C.violinMedianLabel, legendgroup: "median",
+          showlegend: medians.length === 1,
+          x: [[regAbbr(id)], [String(yr)]], y: [log ? Math.log10(med) : med],
+          // Dark grey, not the text colour: black overwhelmed the violins (Nicola, 2026-11-09).
+          marker: { symbol: "line-ew", size: medLen, line: { color: th.muted, width: 2 } },
+          hovertemplate: `<b>${fmt(med, decimals(v))}</b> ${esc(unit)}<br>${C.violinMedianLabel}, ` +
+            `${esc(regLabel(id))}, ${yr} (${v.length} countries)<extra></extra>`,
+        });
       });
+    }
+    // Median rows in the table too, so the accessible twin carries the same information.
+    for (const id of regs) {
+      const ms = medians.filter((m) => m.id === id);
+      if (ms.length) rows.push([regLabel(id), `${C.violinMedianLabel} (${ms[0].n} countries)`, ...ms.map((m) => m.med)]);
     }
     const skipped = state.regions.filter((id) => !members(id)).map(regLabel);
     const notes = [];
     if (skipped.length) notes.push(`Countries are not shown here (a distribution needs a region): ${skipped.join(", ")}.`);
     if (few.length) notes.push(`Fewer than ${C.violinMinCountries} countries, so dots only: ${few.join(", ")}.`);
     if (log) notes.push("Log scale: each gridline is 10 times the one below.");
+    if (param === "Total Yield") notes.push(C.violinMedianNote); // R51: unweighted median vs. weighted line
     missingNote(c, missing, notes);
     if (!data.length) return empty(c, "No country data for the selected regions and commodity.");
-    const layout = baseLayout(th, { violinmode: "overlay", hovermode: "closest", showlegend: false, height: plotHeight(c) + 16 });
+    // One legend entry, "Median", above the plot at the right (R49).
+    const layout = baseLayout(th, { violinmode: "overlay", hovermode: "closest", showlegend: true, height: plotHeight(c) + 16,
+      legend: { orientation: "h", x: 1, xanchor: "right", y: 1, yanchor: "bottom", font: { color: th.text2 } } });
     layout.xaxis.type = "multicategory"; layout.xaxis.showgrid = false; layout.xaxis.dividercolor = th.grid;
     layout.xaxis.tickfont = { color: th.text2, size: 12 };
     if (regs.length * years.length > 10) layout.xaxis.tickangle = -90;

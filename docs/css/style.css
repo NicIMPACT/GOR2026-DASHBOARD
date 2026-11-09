@@ -143,6 +143,7 @@ select { min-width: 12rem; }
 .map-legend .map-legend-title { flex-basis: 100%; }
 .map-legend .swatch { width: 14px; height: 14px; border-radius: 3px; flex: none; }
 .chart-msg { font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 0; }
+.map-caption { font-size: 0.8rem; font-style: italic; color: var(--text-secondary); margin: 6px 0 0; } /* map disclaimer, R50 */
 .chart-empty { display: flex; align-items: center; justify-content: center; text-align: center; color: var(--text-secondary); height: 200px; padding: 16px; border: 1px dashed var(--axis); border-radius: 8px; }
 .card-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
 .card-tools[hidden] { display: none; } /* empty cards (e.g. violins with countries only, R44) have no table or CSV */

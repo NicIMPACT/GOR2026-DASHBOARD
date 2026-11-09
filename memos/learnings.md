@@ -72,6 +72,33 @@ After a commit, `git status` says *"Your branch is ahead of 'origin/main' by 2 c
 
 If unsure, run `git status` first. It tells you where you are, and it often suggests the next command too.
 
+**Nicola's question (2026-11-09):** after `git push`, what wording in the terminal shows that the push worked? Claude's answer follows.
+
+A successful push ends with a line like this:
+
+```
+To github.com:NicIMPACT/GOR2026-DASHBOARD.git
+   c13be91..fa478ed  main -> main
+```
+
+That last line is the one to look for. It means GitHub's `main` moved from the old commit (`c13be91`) to the new one (`fa478ed`). The lines before it ("Enumerating objects", "Writing objects: 100%", "Total …") are only progress messages.
+
+| Wording | Meaning |
+|---|---|
+| `old..new  main -> main` | Pushed. |
+| `Everything up-to-date` | Nothing was sent. Usually nothing was committed, or the commit was already pushed. |
+| `! [rejected] main -> main (fetch first)` or `(non-fast-forward)` | Not pushed. GitHub has commits that aren't on this computer (e.g. a file edited on the website). Run `git pull origin main`, then push again. |
+| `Permission denied (publickey)` or `Authentication failed` | Not pushed. Login or SSH key problem. |
+| `fatal: …` or `error: …` | Not pushed. The message says why. |
+
+Rule of thumb: `rejected`, `error` or `fatal` means the push did not go through; the `old..new  main -> main` line with no errors means it did.
+
+*Other ways to check*
+
+- `git status` afterwards says *"Your branch is up to date with 'origin/main'"*. Run `git fetch` first to be fully sure.
+- In VS Code's Source Control panel, the sync arrows clear (no "1↑" left).
+- On GitHub, the latest commit above the file list is the new one, and the **Actions** tab shows a green tick for the "pages build and deployment" run. The live site updates a few minutes later (hard refresh with Ctrl+F5).
+
 **Nicola's question (2026-11-03):** the repository is in Nicola's own GitHub account (`NicIMPACT`), which belongs to the IFPRI organization. Once the dashboard is finished, how is it moved to IFPRI's institutional GitHub account? Claude's answer follows.
 
 GitHub can **transfer** a repository from a personal account to an organization. History, issues, settings and the GitHub Pages configuration move with it.
@@ -96,4 +123,4 @@ GitHub can **transfer** a repository from a personal account to an organization.
 *Alternative, not recommended:* an org owner creates an empty repo and Nicola pushes the local copy there (`git push --mirror`). History is kept, but Pages and other settings must be set up again, the old repo lingers, and nothing redirects.
 
 ---
-*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-11-03.*
+*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi (IFPRI), 2026-11-09.*
