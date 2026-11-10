@@ -5,7 +5,7 @@
  * UNITS: inferred on 2026-10-20 from value magnitudes and IMPACT conventions
  * (e.g. USA wheat 2025: production 55,150 -> thousand t; area 15,552 -> thousand ha;
  * yield 3.5 -> t/ha; world share at risk 8.3 -> %). Confirmed by Nicola on 2026-10-21,
- * except the base year of the constant-price USD for world prices (still to confirm).
+ * World prices: constant 2021 USD (base year confirmed by Nicola on 2026-11-10).
  */
 window.GOR_CONFIG = {
   scenarioLabel: "Reference scenario (REF)",
@@ -19,7 +19,7 @@ window.GOR_CONFIG = {
     "Total Demand":  { label: "Total demand", unit: "thousand t" },
     "Food Demand":   { label: "Food demand", unit: "thousand t" },
     "Net Trade":     { label: "Net trade", unit: "thousand t" },
-    "World Price":   { label: "World price", unit: "USD per t (constant prices)" },
+    "World Price":   { label: "World price", unit: "USD per t (2021 constant prices)" },
     "Kcal pc":       { label: "Calorie availability", unit: "kcal per person per day" },
     "Kcal pc by Commodity": { label: "Calorie availability by food group", unit: "kcal per person per day" },
     "Pop at risk of hunger": { label: "Population at risk of hunger", unit: "million people" },
@@ -31,8 +31,9 @@ window.GOR_CONFIG = {
   hungerGoal: { value: 5, label: "5% Threshold", mapLabel: "Below 5% (threshold)", color: "#000000" },
 
   // Negative risk-of-hunger values (a model artefact) are written as 0 by build_data.py (R26).
-  // Burundi and Eritrea are shown as no data instead (R31; HUNGER_NO_DATA in build_data.py).
-  hungerClipNote: "Negative values in the model output are shown as 0, except for Burundi and Eritrea, shown as no data because the model value is not reliable.",
+  // Burundi and Eritrea are shown as no data instead (R31; HUNGER_NO_DATA in build_data.py),
+  // but the note no longer names them (Nicola, 2026-11-10, R53).
+  hungerClipNote: "Negative values in the model output are shown as 0.",
 
   // Fixed map classes for share at risk, so the 5% goal is always a class edge.
   shareBins: [5, 10, 15, 25],
@@ -41,6 +42,29 @@ window.GOR_CONFIG = {
   // World value (Nicola, R33). They stay selected but are skipped on the Prices & trade tab.
   tradeExcluded: ["WLD"],
   tradeExcludedNote: "World is not shown: net trade is zero worldwide, as exports and imports cancel out.",
+
+  // The commodity selection is shared by all tabs (R55), but not every commodity exists in
+  // every dataset (e.g. livestock and fish have no yield or area; sugarcane has no trade).
+  // Those stay selected, faded, and are skipped on that tab, as World is on trade (R33).
+  // {list} and {fallback} are replaced by commodity names.
+  comMissingNote: "Not available on this tab: {list}.",
+  comFallbackNote: "Showing {fallback} instead.",
+  // After "Clear all" in the commodity drop-down (R61), until a commodity is ticked.
+  comNone: "None selected",
+  noRegions: "No region or country selected. Choose one or more with \"Regions and countries\" at the top.",
+  comNoneNote: "No commodity selected: showing {fallback}. Tick one or more in the Commodities list.",
+
+  // CSV downloads repeat the card's subtitle as a description. These parts only make sense
+  // next to the chart (colours, shapes, clicks), so they are left out of the file (R60).
+  // An entry is a pattern to delete, or [pattern, replacement].
+  csvDrop: [
+    [/Blue area above zero: net exports; red area below zero: net imports\./, "Positive values: net exports; negative values: net imports."],
+    [/; [^;.]+ highlighted\./, "."],
+    /,? ?log scale/,
+    /(^|\s)Grey: no data\./, /(^|\s)Click a country[^.]*\./, /(^|\s)Choose [^.]*\./,
+    /(^|\s)Blue: net exporter; red: net importer\./, /(^|\s)Dashed line: [^.]*\./,
+    /(^|\s)Each dot is a country;[^.]*\./, /(^|\s)Lighter shape: [^.]*\./, /(^|\s)Grey line: [^.]*\./,
+  ],
 
   // Food groups for the calorie-composition chart. Each sums the IMPACT diet groups in
   // `codes`. Animal-source and aquatic foods are combined into one group (Nicola, R17);
@@ -114,9 +138,10 @@ window.GOR_CONFIG = {
   defaults: {
     regions: ["CWANA", "ESA", "LAC", "SEA", "SA", "WCA"], // the six CG regions (R32)
     year: 2050,
-    // Lists: several allowed (R14). Rice replaces Maize as the starting commodity (R45),
-    // and Cereals on the production & demand tab too (R48), so every tab opens on Rice.
-    commodity: { yield: ["Rice"], production: ["Rice"], trade: ["Rice"] },
+    // Several allowed (R14). Rice replaces Maize as the starting commodity (R45, R48).
+    // One list shared by all tabs, like the regions (R55). Also the fallback on a tab where
+    // none of the selected commodities has data.
+    commodities: ["Rice"],
   },
   maxRegions: 8, // one categorical colour per region; never a 9th generated hue
   maxCommodities: 6, // one small-multiple panel per commodity (R14)

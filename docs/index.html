@@ -30,6 +30,8 @@
         <div class="picker" id="region-picker">
           <button type="button" class="btn picker-toggle" id="picker-toggle" aria-expanded="false" aria-controls="picker-panel" aria-describedby="region-label"></button>
           <div class="picker-panel" id="picker-panel" hidden>
+            <!-- Clears the whole selection in one click (R61). -->
+            <button type="button" class="link-btn picker-clear" id="picker-clear">Clear all</button>
             <label class="sr-only" for="picker-search">Search regions and countries</label>
             <input type="search" id="picker-search" placeholder="Search, e.g. Kenya">
             <p class="picker-note" id="picker-note" aria-live="polite"></p>
@@ -43,6 +45,7 @@
         <div class="picker" id="commodity-picker">
           <button type="button" class="btn picker-toggle" id="com-toggle" aria-expanded="false" aria-controls="com-panel" aria-describedby="commodity-label"></button>
           <div class="picker-panel" id="com-panel" hidden>
+            <button type="button" class="link-btn picker-clear" id="com-clear">Clear all</button>
             <label class="sr-only" for="com-search">Search commodities</label>
             <input type="search" id="com-search" placeholder="Search, e.g. Wheat">
             <p class="picker-note" id="com-note" aria-live="polite"></p>
@@ -77,6 +80,8 @@
       </div>
       <ul class="chips" id="chips" aria-label="Selected regions and countries"></ul>
       <ul class="chips" id="com-chips" aria-label="Selected commodities"></ul>
+      <!-- Selected commodities this tab has no data for (R55); text from config.js. -->
+      <p class="chips-note" id="com-missing" aria-live="polite" hidden></p>
     </section>
 
     <main id="main" tabindex="-1">
@@ -92,7 +97,8 @@
         <li>Grey areas on maps have no data. Some IMPACT regions group several small countries and are shown in charts and tables but not on maps.</li>
         <li>Projections are model results under stated assumptions, not forecasts.</li>
       </ul>
-      <p class="attribution">Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi and Nilam Prasai (IFPRI), 2026-11-09.</p>
+      <!-- Wording set by Nicola, 2026-11-10 (R58); replaces the "Produced by Claude ..." line (R36). -->
+      <p class="attribution">Dashboard developed by Nicola Cenacchi and Nilam Prasai using Claude (Anthropic), an AI model. Accuracy reviewed by developers, but errors may still exist. 2026-11-10</p>
     </footer>
   </div>
 </body>

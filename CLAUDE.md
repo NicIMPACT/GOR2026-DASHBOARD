@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Data for a dashboard for the IFPRI **Global Outlook Report (GOR) 2026** (Global Futures 2026). The inputs are IMPACT model projections, 2025–2050 in 5-year steps. Nicola Cenacchi (IFPRI) prepared them and extracted them for Nilam Prasai (IFPRI). The AI attribution line in the dashboard footer names both, Nicola first (R36).
+Data for a dashboard for the IFPRI **Global Outlook Report (GOR) 2026** (Global Futures 2026). The inputs are IMPACT model projections, 2025–2050 in 5-year steps. Nicola Cenacchi (IFPRI) prepared them and extracted them for Nilam Prasai (IFPRI). The AI attribution line in the dashboard footer names both, Nicola first (R36). Since 2026-11-10 it uses Nicola's own wording (R58): "Dashboard developed by Nicola Cenacchi and Nilam Prasai using Claude (Anthropic), an AI model. Accuracy reviewed by developers, but errors may still exist." followed by the date; keep this wording and update only the date.
 
 The plan is to build a static web dashboard from the four `*_REF.csv` datasets. The data and code will go in a GitHub repository and be published with GitHub Pages, so the dashboard must run entirely in the browser, with no server backend. Nicola confirmed on 2026-10-20 that all the data is cleared for public release.
 
@@ -21,8 +21,8 @@ The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, bran
   - `docs/js/config.js` holds all wording, **units**, colours, defaults and the 5% hunger goal. Edit wording and units there, not in `app.js`.
   - `docs/js/app.js` is organised as follows:
     - `TABS` defines the four tabs (dataset, commodity parameters, indicator options, render function). Each tab's render function builds "cards" with generic helpers: `lineChart`, `groupedBars`, `ranking`, `mapChart`, plus some tab-specific charts.
-    - The state (tab, regions, year, commodities and map commodity per tab, indicator per tab, index view, trade scale) is mirrored in the URL hash, so views can be shared as links.
-    - Each card has a data table and a CSV download, which is the accessible equivalent of the chart.
+    - The state (tab, regions, year, commodities and map commodity, indicator per tab, index view, trade scale) is mirrored in the URL hash, so views can be shared as links.
+    - Each card has a data table and a CSV download, which is the accessible equivalent of the chart. CSVs start with a UTF-8 BOM so Excel shows dashes and accents correctly (R59), then quoted description lines (title and subtitle, notes, source), a blank line and the table. Chart-only phrases (colours, shapes, clicks) are removed with `csvDrop` in `config.js`; add new ones there (R60).
     - Every change redraws the whole tab (`render()`). It holds the panel's height and restores the scroll position, so controls far down the page don't throw the user back to the top (R41).
   - JSON layout: `data[parameter][region][commodity] = [value per year]` for 2025–2050. World Price uses region `-`.
 - Design rules, from the dataviz skill and agreed in R1–R15 (see `memos/progress.md`):
@@ -35,7 +35,9 @@ The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, bran
   - Several commodities (up to 6) are shown as small multiples, one panel per commodity, so colour always means region (R14). The map, rankings, violins and price-change chart show one commodity (`state.focus`), chosen with "Map and rankings show" or with the carousels above the map, the ranking and the violins (arrows, dots, Left/Right keys; `carousel()` in `app.js`, R39, R41). All three controls set the same choice, so the map and the ranking always agree; moving either carousel moves both (R41, superseding R40).
   - The (i) button next to "Line charts show" explains values vs. index (`indexInfo` in `config.js`, `buildInfo()` in `app.js`, R37). It opens on hover, stays open on click, and closes with Escape or a click elsewhere.
   - Net trade is drawn as area panels, one per region, coloured by sign (blue exports, red imports), not by region (R13). World has no net trade (exports and imports cancel out), so it is skipped on the trade tab but kept in the shared selection (`tradeExcluded`, R33).
-  - The default selection is the six CG regions: CWANA, ESA, LAC, SEA, SA, WCA (`defaults.regions`, R32). The default commodity is Rice on all three commodity tabs (`defaults.commodity`, R45, R48).
+  - The default selection is the six CG regions: CWANA, ESA, LAC, SEA, SA, WCA (`defaults.regions`, R32). The default commodity is Rice (`defaults.commodities`, R45, R48).
+  - The commodity selection and the map/ranking commodity are shared by all tabs, like the regions (`state.coms`, `state.comFocus`, R55). A selected commodity that a tab's dataset lacks (e.g. livestock and fish on yield & area; sugarcane, sugar beet and palm fruit on prices & trade) stays selected, with a faded chip and the note `comMissingNote`, and is skipped there, as World is on trade (R33). If none is left, the tab shows Rice (`comFallbackNote`) without changing the selection. `syncCommodity()` derives each tab's `state.commodity[key]` and `state.focus[key]`, which the renderers read.
+  - Both drop-downs have a "Clear all" button at the top (R61). With no region, the region charts show `noRegions`; with no commodity, each tab shows Rice with `comNoneNote` until one is ticked.
   - The production-vs-demand bars show production, total demand and food demand in neutral greys; food demand is total demand's grey, hatched, as it is part of total demand (R43).
   - Yield & area tab, bottom row: the ranking (half width) sits next to a violin plot (`regionViolins()`, R44, R46). Each selected region gets violins for 2025 and the chosen year, drawn from its countries' values. Region membership comes from the metadata (`members()` in `app.js`), never from IMPACT's aggregate values. Countries without the crop are absent, not zero, and only countries with values in both years are used. Selected countries are skipped (with countries only, the card shows `violinNeedsRegion`). Area uses a log10 scale, with the density computed on log values. Regions with fewer than `violinMinCountries` (5) countries show dots only. Country dots, no boxplot (R46). Each violin has a dark-grey median line (`th.muted`, not black, which overwhelmed the figure) (a separate `line-ew` marker, unweighted median of raw country values) with a "Median" legend entry and median rows in the table (R49); on yield, a note says this median differs from the area-weighted regional line (`violinMedianNote`, R51). The card has its own carousel, synced with the map and ranking (R41).
   - Regional yields are area-weighted. When a region is selected, the yield line chart's subtitle adds only "Regional yields are area-weighted." (`regionYieldNote`, R51, option B; keep it that short, Nicola 2026-11-09; alternatives recorded in `memos/progress.md`, 2026-11-09). Crop-group yields (e.g. Cereals) are IMPACT's total production / total area over the group's crops and need no note.
@@ -47,7 +49,7 @@ The repository is `NicIMPACT/GOR2026-DASHBOARD` on GitHub (remote `origin`, bran
   - Side-by-side charts always have identical plot areas (`equalizePairs()` in `app.js`, run after each render, R23). Single-panel plot height comes from `plotHeight()`; keep new paired charts on that helper.
   - Chart heights follow the card width and the page is capped at 1,440 px, so lines keep a readable aspect ratio (R12).
 - Requests log: `memos/progress.md` keeps every dashboard request (R1, R2, …) with its status. Never delete a request; mark changed ones *superseded by Rn*. Code comments cite these numbers.
-- `MAP_MEMBERS` in `build_data.py` assigns non-ISO IMPACT regions (`BLT`, `BLX`, `CHM`, `SDN`, `OBN`, `RAP`, …) to the map polygons they are drawn on. This is an assumption still to be confirmed; Nicola asked to revisit it around 2026-10-23. The small-island groups (`CRB`, `OAO`, `OIO`, `OPO`) are not drawn.
+- `MAP_MEMBERS` in `build_data.py` assigns non-ISO IMPACT regions (`BLT`, `BLX`, `CHM`, `SDN`, `OBN`, `RAP`, …) to the map polygons they are drawn on. Confirmed by Nicola on 2026-11-10 (R54), with two corrections: `SDN` is Sudan only (South Sudan is left blank, as no data), and Kosovo is not part of `OBN` (left blank). The small-island groups (`CRB`, `OAO`, `OIO`, `OPO`) are not drawn.
 - CG region labels (`CWANA`, `ESA`, …, `EUR`, `NA`, `EAPhi`) come from the metadata's "CG6-full names" column (R28). The other aggregate labels (`AGG_REGION_LABELS`: World, DVG/DVD, CGSIX/ROW, income groups; CGSIX and DVG/DVD confirmed by Nicola) and the commodity-group labels (`COMMODITY_*_LABELS`) are the dashboard's own wording.
 
 ## Files
@@ -86,7 +88,7 @@ These are long-format tables. The columns are `impactparameter, scenario, commod
   | `Production`, `Total Demand`, `Food Demand`, `Net Trade` | thousand t |
   | `Total Area` | thousand ha |
   | `Total Yield` | t/ha |
-  | `World Price` | USD per t, constant prices (**base year still to confirm**; Nicola to answer on 2026-10-22) |
+  | `World Price` | USD per t, 2021 constant prices (base year confirmed by Nicola, 2026-11-10) |
   | `Kcal pc`, `Kcal pc by Commodity` | kcal per person per day |
   | `Pop at risk of hunger` | million people |
   | `Share Pop at risk of hunger` | % of population |
@@ -106,8 +108,8 @@ A negative number of people is impossible, so this is a model artefact.
 
 **The decision.** Show negative values as 0. Nicola decided this on 2026-10-21; it is request R26 in `memos/progress.md`.
 - **Implementation:** `CLIP_AT_ZERO` in `scripts/build_data.py` sets the 528 negative rows to 0 when the JSON is built. The raw and cleaned CSVs are unchanged. Doing it at build time keeps every view consistent: maps, charts, rankings and CSV downloads.
-- **Exception, Burundi and Eritrea (R31, 2026-10-21, temporary):** their risk-of-hunger rows are dropped (`HUNGER_NO_DATA` in `build_data.py`), so they show as "no data" instead of 0. See the reflections below for why. Nicola will decide on a lasting treatment after checking (reminder set for 2026-10-22).
-- **What users see:** the hunger map, the share and population charts and the ranking say "Negative values in the model output are shown as 0, except for Burundi and Eritrea, shown as no data because the model value is not reliable." (`hungerClipNote` in `docs/js/config.js`).
+- **Exception, Burundi and Eritrea (R31, 2026-10-21; confirmed as standing 2026-11-10, R53):** their risk-of-hunger rows are dropped (`HUNGER_NO_DATA` in `build_data.py`), so they show as "no data" instead of 0. See the reflections below for why.
+- **What users see:** the hunger map, the share and population charts and the ranking say "Negative values in the model output are shown as 0." (`hungerClipNote` in `docs/js/config.js`). The note does not name Burundi and Eritrea; they simply appear as no data (Nicola, 2026-11-10, R53).
 - **Aggregates are never recomputed** (Nicola, 2026-10-22, R34), so they stay as in the Global Outlook Report and IMPACT's original results. This holds for every data change; all changes are listed in `memos/progress.md`, section "Data modifications". Aggregates are clipped at 0 like the countries. IMPACT's aggregates are sums of their countries *including* the negatives. So, in 2050:
   - World is 491.5 million, while the zeroed countries add up to 497.4 million (+5.8 million, +1.2%);
   - High income is 0.3 million, against 5.6 million summing its countries;
@@ -129,6 +131,7 @@ A negative number of people is impossible, so this is a model artefact.
 ## Other series removed from the dashboard
 
 - **China, Net Trade, Maize** (R35, Nicola, 2026-10-22; temporary): the team found an issue in the model for this series and is fixing it. The 6 rows are dropped at build time (`SERIES_NO_DATA` in `build_data.py`, a list of parameter, region and commodity series), so China shows as no data. Aggregates that include China are unchanged (R34). To remove another single series, add it to `SERIES_NO_DATA` and log it in "Data modifications".
+- **Greenland, all parameters** (R56, Nicola, 2026-11-10): all its rows (288) are dropped at build time (`REGION_NO_DATA` in `build_data.py`), so it shows as no data everywhere but stays in the region picker. It had no crop data already, and the most negative share at risk of hunger (−15.8%). Aggregates unchanged (R34). With Greenland gone, the zeroing (M1) affects 492 rows instead of 504.
 
 ## Project memos
 

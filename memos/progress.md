@@ -57,6 +57,16 @@ This is a running list of Nicola's instructions for the dashboard and the status
 | R49 | 2026-11-09 | (From a colleague of Nicola's) Add a line marking the median to the violin plot, labelled "median" if possible, otherwise explained in a note under the figure. | built 2026-11-09: a short dark-grey horizontal line on each violin (a `line-ew` marker, as Plotly only draws a median inside the box removed in R46); first drawn black (text colour, 2.5 px), changed the same day to dark grey (`--text-muted`: #6b6a65 light, #a3a29b dark mode; 2 px) because black overwhelmed the figure (Nicola); "Median" legend entry at the top right; subtitle adds "Grey line: median country value."; hover gives the value and the number of countries; one "Median (n countries)" row per region in the data table and CSV. Unweighted median of raw country values (log10 of it on the area chart). Checked in headless Edge; grey line **tested by Nicola 2026-11-09** |
 | R50 | 2026-11-09 | (From a colleague of Nicola's) Under all maps, add the caption "Illustrative map only. Boundaries only denote geographical coverage as it exists in IMPACT. The boundaries, names, and designations used in this publication do not imply official endorsement or acceptance by the authors, the International Food Policy Research Institute (IFPRI), or its partners and donors." | built 2026-11-09: `mapDisclaimer` in `config.js`, added by `mapChart()` (so all four tabs), in small italics directly under the map and its phone legend (`.map-caption` in `style.css`). Checked in headless Edge; **tested by Nicola 2026-11-09** |
 | R51 | 2026-11-09 | (From a colleague of Nicola's) Regional yields in the line charts are area-weighted, but a single country shows its raw yield: where to say so? Nicola chose option B (see diary 2026-11-09), plus a line under the violins. Crop-group yields need no note: they are also total production / total area over the group's crops (Nicola). Follow-up the same day: the subtitle should only say that regional yields are area-weighted, nothing longer. | built 2026-11-09: `regionYieldNote` ("Regional yields are area-weighted.") appended to the yield line chart's subtitle only when at least one region is selected; first built with a longer sentence (production / area explanation), shortened at Nicola's request, which also keeps the subtitle on one line so the yield and area charts line up; `violinMedianNote` under the yield violins (unweighted median vs. area-weighted regional line). Checked in headless Edge with the default regions (both notes shown) and with Kenya + India only (neither shown); **tested by Nicola 2026-11-09** |
+| R52 | 2026-11-10 | World prices are in 2021 constant prices. Closes the open base-year question from R30. | built 2026-11-10: unit now "USD per t (2021 constant prices)" (`parameters` in `config.js`); units table in `CLAUDE.md` updated |
+| R53 | 2026-11-10 | Negative risk-of-hunger values stay 0 (R26). Burundi and Eritrea stay "no data" (R31), now as the standing treatment, but with no country-specific comment: the note should no longer name them. | built 2026-11-10: `hungerClipNote` now reads "Negative values in the model output are shown as 0."; `HUNGER_NO_DATA` unchanged (M2 no longer temporary). Checked in headless Edge (food security tab) |
+| R54 | 2026-11-10 | The map assignment of combined IMPACT regions (`MAP_MEMBERS`) is correct, except: `SDN` is Sudan only, so South Sudan is blank (no data); Kosovo is not part of Other Balkans (`OBN`). | built 2026-11-10: `MAP_MEMBERS` in `build_data.py` (`SDN` → Sudan; `OBN` without `XKX`); JSON rebuilt (only `meta.json` changed). Checked in headless Edge: South Sudan grey on the hunger map |
+| R55 | 2026-11-10 | A commodity chosen in one tab should apply to the other tabs too, as regions already do. | built 2026-11-10: one shared commodity list (`state.coms`) and one shared map/ranking commodity (`state.comFocus`); `syncCommodity()` derives each tab's selection. Commodities a tab's dataset lacks stay selected, with a faded chip and "Not available on this tab: …" (`comMissingNote`), as World on trade (R33); if none is left, the tab shows Rice ("Showing Rice instead.", `comFallbackNote`) without changing the selection. `defaults.commodity` (per tab) replaced by `defaults.commodities`. Checked in headless Edge with shared links (Beef + Wheat on yield and production; Beef alone on yield); switching tabs by click not tested |
+| R56 | 2026-11-10 | Show Greenland as no data for all parameters. | built 2026-11-10: `REGION_NO_DATA` in `build_data.py` drops its 288 rows (M5); it stays in the region picker. Aggregates unchanged (R34) |
+| R57 | 2026-11-10 | The search box in the region drop-down doesn't work (it does for commodities). | fixed 2026-11-10: CSS `display: flex` on the picker entries overrode the `hidden` attribute set by the search, so a group with any match showed all its entries; for regions, the 158 countries never shrank. One rule in `style.css` fixes both pickers. Tested in headless Edge by typing into both search boxes |
+| R58 | 2026-11-10 | New footer attribution: "Dashboard developed by Nicola Cenacchi and Nilam Prasai using Claude (Anthropic), an AI model. Accuracy reviewed by developers, but errors may still exist. 2026-11-09" | built 2026-11-10 in `index.html`, replacing the "Produced by Claude …" line (R36); date changed to 2026-11-10 at Nicola's request |
+| R59 | 2026-11-10 | Downloaded CSVs show "2025â€“2050" at the top: the dash is turned into a combination of characters. Fix it. | fixed 2026-11-10: every download starts with a UTF-8 byte-order mark, is labelled `text/csv;charset=utf-8` and uses Windows line endings (`table()` in `app.js`). Checked in headless Edge (file starts with `EF BB BF`); **tested by Nicola 2026-11-10** |
+| R60 | 2026-11-10 | The description lines at the top of the CSVs: commas should not break them across cells; leave out text that only makes sense on the chart. | built 2026-11-10: each description line is one quoted field, followed by a blank line and the table; chart-only phrases removed or rewritten via `csvDrop` in `config.js`. Checked in headless Edge on every CSV of all four tabs; **tested by Nicola 2026-11-10** |
+| R61 | 2026-11-10 | Add a button at the top of the region and commodity drop-downs that clears all selections, so a new set can be chosen without unticking each box. The dashboard must still open on the six CG regions. | built 2026-11-10: "Clear all" in both drop-downs (greyed out when nothing is selected; the drop-down stays open). No region: charts that need one show `noRegions` (also replaces the misleading "No data for the selected regions" and the trade tab's "World is not shown…"). No commodity: each tab shows Rice with `comNoneNote` until one is ticked. Defaults unchanged: a fresh launch, or a reload after "Clear all", opens on the six CG regions and Rice. Checked in headless Edge by clicking; **tested by Nicola 2026-11-10** |
 
 ## Data modifications
 
@@ -64,16 +74,96 @@ Every change the dashboard makes to IMPACT's values, in one place. All are appli
 
 | # | What | Rows | Treatment | Where in the code | Request |
 |---|---|---|---|---|---|
-| M1 | Negative `Pop at risk of hunger` and `Share Pop at risk of hunger`: 39 countries (mostly high-income; 41 before M2) and the aggregates EUR, NA and ROW | 504 (528 before M2) | set to 0 | `CLIP_AT_ZERO` | R26 |
-| M2 | Burundi and Eritrea, both risk-of-hunger parameters, all years (negative despite the lowest calorie availability in the data) | 24 | dropped, shown as "no data". **Temporary**, pending a lasting decision | `HUNGER_NO_DATA` | R31 |
+| M1 | Negative `Pop at risk of hunger` and `Share Pop at risk of hunger`: 38 countries (mostly high-income; 41 before M2 and M5) and the aggregates EUR, NA and ROW | 492 (528 before M2, 504 before M5) | set to 0 | `CLIP_AT_ZERO` | R26 |
+| M2 | Burundi and Eritrea, both risk-of-hunger parameters, all years (negative despite the lowest calorie availability in the data) | 24 | dropped, shown as "no data" (standing treatment since 2026-11-10; was temporary) | `HUNGER_NO_DATA` | R31, R53 |
 | M3 | China, `Net Trade`, Maize, all years (a model issue found by the team, being fixed) | 6 | dropped, shown as "no data". **Temporary**, until the model is fixed | `SERIES_NO_DATA` | R35 |
 | M4 | Fodder and grass (`Fodders`, `Grass` and the `FORx` group), all parameters, regions and years | 5,328 | dropped entirely, and removed from the commodity picker | `EXCLUDE_GROUPS` | R38 |
+| M5 | Greenland, all parameters and years (food security 72, prices & trade 54, production & demand 162; no crop data already) | 288 | dropped, shown as "no data" everywhere; still in the region picker | `REGION_NO_DATA` | R56 |
 
-What users see: M1 and M2 are explained in a note on the hunger map, charts and ranking (`hungerClipNote` in `config.js`). M3 shows only the generic "No data for: China (Maize)". M4 has no note: fodder and grass simply aren't offered.
+What users see: M1 is explained in a note on the hunger map, charts and ranking (`hungerClipNote` in `config.js`). M2 has no specific note since R53: Burundi and Eritrea simply show as no data. M3 shows only the generic "No data for: China (Maize)". M4 has no note: fodder and grass simply aren't offered. M5 has no note: Greenland simply shows as no data.
 
 Not a data change, but related: World has no net trade in IMPACT, so it is skipped on the trade tab (R33, `tradeExcluded` in `config.js`).
 
 Diary entries follow, newest first.
+
+---
+
+## 2026-11-10 (evening): "Clear all" buttons (R61)
+
+**Steps**
+- Nicola asked for a button to clear the region and commodity selections in one click. Added "Clear all" at the top of both drop-downs, tested by clicking in headless Edge, then by Nicola.
+- Nicola asked that the dashboard still open on the six CG regions: checked, unchanged (an empty selection in a link falls back to the defaults).
+
+**Decisions and why**
+- **No commodity falls back to Rice, with a note.** Every commodity chart needs at least one commodity; showing the default with "No commodity selected: showing Rice" keeps the page drawn while the user picks. The first tick replaces it.
+- **Messages for an empty region selection.** "No data for the selected regions" and the trade tab's World note read as data problems when nothing is selected, so both now say that no region is selected (`noRegions`, handled in `empty()`).
+
+**Open to-dos**
+- Commit.
+
+---
+
+## 2026-11-10 (evening): CSV downloads fixed (R59–R60)
+
+**Steps**
+- Nicola reported "2025â€“2050" at the top of a downloaded CSV (R59). Cause: Excel reads a UTF-8 file without a byte-order mark as Windows-1252. Fixed by adding the mark.
+- While testing, Claude noticed that the description lines copied on-screen instructions and split at commas in Excel; Nicola asked to fix both (R60).
+- `README.md` attribution updated to R58's wording, and its "values exactly as in the source CSVs" note replaced by the list of data changes (at Nicola's request, listing each change).
+- Problem description and solution added to `learnings.md`, section "CSV downloads" (Nicola's request).
+
+**Decisions and why**
+- **Quoted description lines rather than `#` comments (R60).** Quoting is standard CSV and keeps each line in one Excel cell. The cost is that code can no longer skip them with `comment="#"`; `skiprows` is needed. Excel users are the main audience of the downloads.
+- **Chart-only phrases removed by a list in `config.js` (`csvDrop`)**, not by writing a second, CSV-only subtitle for every chart: one place to edit, and new subtitles are covered unless they add a new on-screen phrase.
+
+**Problems found and solved**
+- One test run made every download fail: the reused headless profile served an old cached `config.js` without `csvDrop`. A fresh profile per run fixed it (now in `learnings.md`).
+
+**Open to-dos**
+- ~~Nicola to open a downloaded CSV in Excel (after Ctrl+F5) to confirm R59–R60~~ (done 2026-11-10: both work). Commit.
+
+---
+
+## 2026-11-10 (later): shared commodities, Greenland, picker search, new attribution (R55–R58)
+
+**Steps**
+- R55: commodities shared across tabs, like regions. Claude first checked which commodities each tab's dataset has: yield & area has 44 (no livestock, fish, oils, oilmeals, sugar), production & demand 75, prices & trade 72 (no sugarcane, sugar beet, palm fruit). So a shared selection will often include commodities a tab can't show.
+- R56: Greenland dropped from all datasets at build time (M5).
+- R57: Nicola reported that the region search didn't work. Cause found in the CSS (below); fixed for both pickers.
+- R58: new footer attribution in Nicola's wording.
+- Tests in headless Edge, through shared links (R55) and through the DevTools protocol, typing into both search boxes (R57).
+
+**Decisions and why**
+- **Unavailable commodities stay selected, faded and skipped (R55).** The same rule as World on the trade tab (R33). Alternatives: drop them from the selection (the user's choice is lost after one tab switch) or keep per-tab lists (what the request asked to change). If none of the selected commodities exists on a tab, the tab shows Rice (the default) with a note, without changing the selection, so going back to the other tab restores the user's choice.
+- **Old shared links:** their commodities now apply to all tabs, not just the tab in the link.
+- **Greenland stays in the region picker (R56)**, as a country without data, consistent with the map (grey) and with how other no-data countries behave.
+- **Attribution (R58):** Nicola's wording replaces the "Produced by Claude … at the request of …" line; the date first as Nicola gave it (2026-11-09), then updated to 2026-11-10 at Nicola's request. `README.md` still has the older line, dated 2026-10-22.
+
+**Problems found and solved**
+- **Picker search (R57).** `.picker-list label { display: flex }` overrode the `hidden` attribute the search sets on non-matching entries; only whole groups were hidden. Regions have one group of 158 countries, so the list never shrank; commodity groups are short, so that search looked fine. Same kind of bug as the card toolbars on 2026-11-05. Fix: `.picker-list label[hidden] { display: none; }`.
+- **Test script pitfalls:** setting `location.hash` doesn't re-render the dashboard (no `hashchange` handler; load `about:blank` first, as noted in `CLAUDE.md`); and `const` declared in two `Runtime.evaluate` calls throws on the second, so wrap each snippet in a block.
+
+**Open to-dos**
+- Nicola to check R55–R58 in the browser, including switching tabs with a mixed commodity selection, and commit.
+- ~~Optional: update the attribution line in `README.md` to match R58.~~ Done 2026-11-10.
+
+---
+
+## 2026-11-10: price base year, Burundi/Eritrea note, map shapes (R52–R54)
+
+**Steps**
+- Three open items, carried in the to-dos since October, were settled with Nicola.
+- R52: Nicola confirmed world prices are in 2021 constant prices. Unit label in `config.js` and the units table in `CLAUDE.md` updated.
+- R53: Claude reminded Nicola why Burundi and Eritrea had been left open (negative share at risk despite the lowest calorie availability in the data, so 0 would read as "no one at risk"). Nicola's first instruction ("no-data as all the other countries with negative values") could be read two ways, because the other negative countries are shown as 0, not as no data. Claude asked; Nicola clarified: zeroing stays the rule, Burundi and Eritrea stay "no data", but with no comment naming them. `hungerClipNote` shortened.
+- R54: Claude showed examples of combined IMPACT regions drawn on several map polygons (Sudan on Sudan + South Sudan, Rest of Arabia on five Gulf states, Other Balkans incl. Kosovo). Nicola confirmed the assignments except `SDN` (Sudan only) and Kosovo (not in `OBN`). `MAP_MEMBERS` updated, JSON rebuilt.
+- Footer attribution date updated to 2026-11-10.
+- Checked in headless Edge (food security tab): generic note shown; Burundi, Eritrea and South Sudan grey.
+
+**Decisions and why**
+- **Burundi and Eritrea: no data, no explanation (R53).** The no-data treatment stays, for the reasons recorded in R31, but users aren't told why for these two countries; they look like any other country without results (as China or Palestine do). The question to the IMPACT team about the hunger module at very low calorie levels remains optional.
+- **South Sudan and Kosovo blank (R54).** IMPACT's `SDN` covers Sudan only, and `OBN` doesn't include Kosovo, so painting them with those regions' values would show numbers that aren't theirs.
+
+**Open to-dos**
+- Nicola to check R52–R54 in the browser and commit.
 
 ---
 

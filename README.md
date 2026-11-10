@@ -40,8 +40,13 @@ In the repository, go to Settings → Pages. Under "Build and deployment", choos
 ## Notes
 
 - Charts use [Plotly.js](https://plotly.com/javascript/) 2.35.2 (MIT licence), loaded from the jsDelivr CDN.
-- Values are shown exactly as in the source CSVs.
+- Values are shown as in the source CSVs, except for a few changes made when the dashboard data is built (`scripts/build_data.py`):
+  - negative risk-of-hunger values are shown as 0;
+  - Burundi and Eritrea (risk of hunger), China's maize net trade, and all of Greenland's data are removed and show as "no data";
+  - fodder and grass are removed.
+
+  Regional and global totals are IMPACT's own and are never recomputed.
 - Region code `NA` is North America, not a missing value.
 
 ---
-*Produced by Claude (Anthropic), an AI model, at the request of Nicola Cenacchi and Nilam Prasai (IFPRI), 2026-10-22.*
+*Dashboard developed by Nicola Cenacchi and Nilam Prasai using Claude (Anthropic), an AI model. Accuracy reviewed by developers, but errors may still exist. 2026-11-10*

@@ -96,12 +96,17 @@ select { min-width: 12rem; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 .picker-panel input { width: 100%; }
+.picker-clear { display: block; margin: 0 0 6px auto; } /* "Clear all", top right of the panel (R61) */
+.picker-clear:disabled { color: var(--text-muted); text-decoration: none; cursor: default; }
 .picker-note { font-size: 0.85rem; color: var(--text-secondary); margin: 6px 2px; min-height: 1.2em; }
 .picker-list { max-height: 22rem; overflow-y: auto; }
 .picker-list fieldset { border: none; margin: 0 0 8px; padding: 0; }
 .picker-list legend { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; padding: 4px 2px; }
 .picker-list label { display: flex; align-items: center; gap: 8px; padding: 4px 4px; border-radius: 6px; cursor: pointer; }
 .picker-list label:hover { background: var(--grid); }
+/* Search hides non-matching entries with `hidden`, which `display: flex` above would override,
+   so a group with one match showed all its entries (region search looked broken, 2026-11-10, R57). */
+.picker-list label[hidden], .picker-list fieldset[hidden] { display: none; }
 .picker-list input { width: 18px; height: 18px; margin: 0; }
 .picker-list input:disabled + span { color: var(--text-muted); }
 
@@ -111,6 +116,9 @@ select { min-width: 12rem; }
   border: 1px solid var(--border); border-radius: 999px; padding: 2px 4px 2px 10px;
 }
 .chips:empty, .chips[hidden] { display: none; }
+/* Selected commodities missing from this tab's dataset (R55). */
+.chips-note { flex-basis: 100%; margin: 0; font-size: 0.85em; color: var(--text-secondary); }
+.chips-note[hidden] { display: none; }
 .chip.chip-off { opacity: 0.5; } /* selected, but not shown on this tab (World on trade, R33) */
 .chip .key { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
 .chip button { font: inherit; background: none; border: none; color: var(--text-secondary); cursor: pointer; border-radius: 999px; width: 28px; height: 28px; }

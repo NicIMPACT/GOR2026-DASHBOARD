@@ -28,9 +28,13 @@
     tab: "yield",
     regions: [...C.defaults.regions],
     year: C.defaults.year,
-    // Selected commodities per tab (R14) and the one shown on the map and rankings, set by
-    // "Map and rankings show" or either carousel (R41).
-    commodity: Object.fromEntries(Object.entries(C.defaults.commodity).map(([k, v]) => [k, [...v]])),
+    // Selected commodities (R14), one list shared by all tabs like the regions (R55), and the
+    // one shown on the map and rankings, set by "Map and rankings show" or either carousel (R41).
+    coms: [...C.defaults.commodities],
+    comFocus: null,
+    // Per tab, derived from coms/comFocus by syncCommodity(): only the commodities this tab's
+    // dataset has. The tab renderers read these.
+    commodity: {},
     focus: {},
     index: false,        // line charts as an index, 2025 = 1 (R15)
     tradeShared: true,   // net-trade panels share one y scale per commodity (R13)
@@ -155,11 +159,11 @@
     const y = Number(h.get("y"));
     if (YEARS.includes(y)) state.year = y;
     const tab = curTab();
-    if (h.get("c") && tab.commodityKey) {
+    if (h.get("c")) {
       const cs = h.get("c").split("|").filter((id) => COM.has(id)).slice(0, C.maxCommodities);
-      if (cs.length) state.commodity[tab.commodityKey] = cs;
+      if (cs.length) state.coms = cs;
     }
-    if (h.get("f") && tab.commodityKey) state.focus[tab.commodityKey] = h.get("f");
+    if (h.get("f")) state.comFocus = h.get("f");
     if (h.get("i") && tab.indicators && tab.indicators.includes(h.get("i"))) state.indicator[tab.id] = h.get("i");
     state.index = h.get("ix") === "1";
     state.tradeShared = h.get("ts") !== "0";
@@ -167,11 +171,9 @@
   function writeHash() {
     const tab = curTab();
     const h = new URLSearchParams({ tab: state.tab, r: state.regions.join("|"), y: state.year });
-    if (tab.commodityKey) {
-      const cs = state.commodity[tab.commodityKey];
-      h.set("c", cs.join("|"));
-      if (cs.length > 1) h.set("f", state.focus[tab.commodityKey]);
-    }
+    // The shared commodity list goes in every link (R55), so it survives a tab switch.
+    h.set("c", state.coms.join("|"));
+    if (state.coms.length > 1 && state.comFocus) h.set("f", state.comFocus);
     if (tab.indicators) h.set("i", state.indicator[tab.id]);
     if (state.index) h.set("ix", "1");
     if (!state.tradeShared) h.set("ts", "0");
@@ -320,6 +322,11 @@
     fillPicker($("#picker-list"), groups, toggleRegion);
     setupPicker($("#region-picker"));
     setupPicker($("#commodity-picker"));
+    // "Clear all" (R61): empties the selection so a new one can be ticked from scratch. The
+    // panel stays open. With no commodity, each tab shows the default one until one is ticked.
+    // Focus moves to the search box, as the button is disabled once the selection is empty.
+    $("#picker-clear").addEventListener("click", () => { state.regions = []; $("#picker-search").focus(); render(); });
+    $("#com-clear").addEventListener("click", () => { state.coms = []; state.comFocus = null; $("#com-search").focus(); render(); });
   }
 
   function toggleRegion(id, on) {
@@ -334,6 +341,7 @@
 
   function syncPicker() {
     const full = syncChecks($("#picker-list"), state.regions, C.maxRegions);
+    $("#picker-clear").disabled = !state.regions.length;
     $("#picker-toggle").textContent = `${state.regions.length} selected (up to ${C.maxRegions})`;
     $("#picker-note").textContent = full
       ? `You have selected the maximum of ${C.maxRegions}. Remove one to add another.` : "";
@@ -353,21 +361,25 @@
     }
   }
 
-  // At least one commodity stays selected; at most C.maxCommodities.
+  // At least one commodity stays selected; at most C.maxCommodities. Acts on the shared
+  // list (R55), so the choice carries over to the other tabs.
   function toggleCommodity(id, on) {
-    const key = curTab().commodityKey, sel = state.commodity[key];
+    const sel = state.coms;
     if (on && !sel.includes(id)) {
       if (sel.length < C.maxCommodities) sel.push(id);
     } else if (!on && sel.length > 1) {
-      state.commodity[key] = sel.filter((c) => c !== id);
+      state.coms = sel.filter((c) => c !== id);
     }
     render();
   }
+  // Map/ranking commodity: shared by all tabs (R55) and stored per tab for the renderers.
+  function setFocus(key, id) { state.comFocus = state.focus[key] = id; }
 
   // Commodity options present in this tab's dataset, grouped by the metadata.
   function syncCommodity(tab, ds) {
     $("#commodity-filter").hidden = !tab.commodityKey;
     $("#com-chips").hidden = !tab.commodityKey;
+    $("#com-missing").hidden = true;
     $("#focus-filter").hidden = true;
     if (!tab.commodityKey) return;
     const key = tab.commodityKey;
@@ -389,24 +401,47 @@
       $("#com-search").value = "";
       comPickerTab = tab.id;
     }
-    let sel = state.commodity[key].filter((id) => present.has(id)).slice(0, C.maxCommodities);
-    if (!sel.length) sel = [groups.find((g) => g.ids.length).ids[0]];
+    // The shared selection (R55), minus what this tab's dataset doesn't have. Those stay in
+    // the shared list (faded chip, note), as World does on the trade tab (R33). If nothing is
+    // left, the tab shows the default commodity (or its first one) without changing the list.
+    const missing = state.coms.filter((id) => !present.has(id));
+    let sel = state.coms.filter((id) => present.has(id)), fallback = null;
+    if (!sel.length) {
+      sel = C.defaults.commodities.filter((id) => present.has(id)).slice(0, 1);
+      if (!sel.length) sel = [groups.find((g) => g.ids.length).ids[0]];
+      fallback = sel[0];
+    }
     state.commodity[key] = sel;
-    if (!sel.includes(state.focus[key])) state.focus[key] = sel[0];
+    state.focus[key] = sel.includes(state.comFocus) ? state.comFocus : sel[0];
 
-    const full = syncChecks($("#com-list"), sel, C.maxCommodities);
-    $("#com-toggle").textContent = sel.length === 1 ? comLabel(sel[0]) : `${sel.length} selected (up to ${C.maxCommodities})`;
+    const full = syncChecks($("#com-list"), state.coms, C.maxCommodities);
+    $("#com-clear").disabled = !state.coms.length;
+    $("#com-toggle").textContent = state.coms.length === 1 ? comLabel(sel[0])
+      : state.coms.length ? `${state.coms.length} selected (up to ${C.maxCommodities})` : C.comNone;
     $("#com-note").textContent = full
       ? `You have selected the maximum of ${C.maxCommodities}. Remove one to add another.`
       : "Tick several to compare them side by side.";
-    renderChips($("#com-chips"), sel.length > 1 ? sel : [], comLabel, null, (id) => toggleCommodity(id, false), true);
+    const chipIds = state.coms.length > 1 || missing.length ? state.coms : [];
+    renderChips($("#com-chips"), chipIds, comLabel, null, (id) => toggleCommodity(id, false), state.coms.length > 1);
+    const miss = $("#com-missing");
+    miss.hidden = !missing.length && state.coms.length > 0;
+    if (!state.coms.length) miss.textContent = C.comNoneNote.replace("{fallback}", comLabel(fallback));
+    if (missing.length) {
+      const note = C.comMissingNote.replace("{list}", missing.map(comLabel).join(", "));
+      chipIds.forEach((id, i) => {
+        if (!missing.includes(id)) return;
+        const chip = $("#com-chips").children[i];
+        chip.classList.add("chip-off"); chip.title = note;
+      });
+      miss.textContent = fallback ? `${note} ${C.comFallbackNote.replace("{fallback}", comLabel(fallback))}` : note;
+    }
 
     if (sel.length > 1) {
       const fsel = $("#focus-select");
       $("#focus-filter").hidden = false;
       fsel.replaceChildren(...sel.map((id) => new Option(comLabel(id), id)));
       fsel.value = state.focus[key];
-      fsel.onchange = () => { state.focus[key] = fsel.value; render(); };
+      fsel.onchange = () => { setFocus(key, fsel.value); render(); };
     }
   }
 
@@ -449,7 +484,8 @@
   function empty(c, text) {
     c.chart.className = "chart-empty"; c.chart.removeAttribute("role"); c.chart.removeAttribute("aria-label");
     c.chart.style.height = "";
-    c.chart.textContent = text;
+    // With no region selected at all (after "Clear all", R61), say so instead of "no data".
+    c.chart.textContent = !state.regions.length && text.startsWith("No data for the selected regions") ? C.noRegions : text;
     c.fig.querySelector(".card-tools").hidden = true;
   }
 
@@ -468,11 +504,18 @@
     c.tw.replaceChildren(t);
     c.dl.onclick = () => {
       const q = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-      const lines = [`# ${c.title}. ${c.sub}`, `# Source: ${C.dataSource}`];
-      if (note) lines.push(`# ${note}`);
+      // Description lines first, each quoted as one field so its commas don't split it across
+      // cells in Excel (R60), then a blank line and the table. Chart-only phrases are dropped.
+      const sub = C.csvDrop.reduce((s, d) => (Array.isArray(d) ? s.replace(d[0], d[1]) : s.replace(d, "")), c.sub).trim();
+      const desc = [`${c.title}.${sub ? " " + sub : ""}`, ...(note ? [note] : []), `Source: ${C.dataSource}`];
+      const lines = desc.map((s) => `"${s.replace(/"/g, '""')}"`);
+      lines.push("");
       lines.push(header.map(q).join(","));
       for (const r of rows) lines.push(r.map((v) => (v == null ? "" : q(v))).join(","));
-      const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      // Leading BOM (﻿): without it Excel reads the UTF-8 file as Windows-1252, so the
+      // en dash in "2025–2050" showed as "â€“" (Nicola, 2026-11-10, R59).
+      // Note: rows no longer start with "#" (R60), so readers need skiprows, not comment="#".
+      const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `${c.id}_${state.year}.csv`.replace(/[^\w.-]+/g, "_");
@@ -810,7 +853,7 @@
   function carousel(key, pre, label) {
     const sel = state.commodity[key], n = sel.length, i = sel.indexOf(state.focus[key]);
     if (n < 2) return undefined;
-    const go = (j, id) => { state.focus[key] = sel[(j + n) % n]; refocus = id; render(); };
+    const go = (j, id) => { setFocus(key, sel[(j + n) % n]); refocus = id; render(); };
     const btn = (id, cls, text, aria, onClick) => {
       const b = document.createElement("button");
       b.type = "button"; b.id = id; b.className = cls; b.textContent = text;
@@ -1089,7 +1132,7 @@
     const th = theme(), unit = pUnit("Net Trade"), nC = coms.length;
     const regs = state.regions.filter((id) => !C.tradeExcluded.includes(id));
     const skipped = state.regions.some((id) => C.tradeExcluded.includes(id)) ? [C.tradeExcludedNote] : [];
-    if (!regs.length) return empty(c, `${C.tradeExcludedNote} Add a region or country.`);
+    if (!regs.length) return empty(c, state.regions.length ? `${C.tradeExcludedNote} Add a region or country.` : C.noRegions);
     const w = c.chart.clientWidth || 900;
     const cols = Math.min(regs.length, Math.max(2, Math.floor(w / 150)));
     const rowsPer = Math.ceil(regs.length / cols);

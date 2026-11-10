@@ -21,8 +21,8 @@ OUTPUTS (docs/data/, served by GitHub Pages)
   <dataset>.json : {"years": [...], "data": {parameter: {region: {commodity: [v per year]}}}}
                    Values are copied unchanged from the CSVs (no rounding), except that
                    negative risk-of-hunger values are set to 0 (see CLIP_AT_ZERO) and
-                   HUNGER_NO_DATA countries' risk-of-hunger rows, the
-                   SERIES_NO_DATA series and the EXCLUDE_GROUPS commodities
+                   REGION_NO_DATA regions (all rows), HUNGER_NO_DATA countries'
+                   risk-of-hunger rows, the SERIES_NO_DATA series and the EXCLUDE_GROUPS commodities
                    (fodder and grass) are dropped;
                    a missing year is written as null.
   meta.json      : region and commodity lists with labels, ISO3 codes and groupings.
@@ -34,7 +34,7 @@ KEY ASSUMPTIONS (flagged; see memos/progress.md)
     other aggregates (AGG_REGION_LABELS: WLD, DVG/DVD, CGSIX/ROW, income groups) and for
     commodity groups (COMMODITY_GROUP_LABELS) were written for the dashboard.
   - MAP_MEMBERS: which ISO3 map polygons each non-standard IMPACT region code is drawn on.
-    This is our assumption about IMPACT region composition and should be checked.
+    Confirmed by Nicola on 2026-11-10 (R54), with SDN = Sudan only and no Kosovo in OBN.
   - CLIP_AT_ZERO: IMPACT reports negative population/share at risk of hunger for 44 regions
     (264 rows per parameter; a model artefact). Shown as 0 (Nicola, 2026-10-21, R26).
     Aggregates are clipped too but NOT recomputed: IMPACT's World total is the sum of
@@ -87,7 +87,9 @@ AGG_REGION_LABELS = {
 }
 
 # IMPACT region codes that are not a single standard ISO3 country, mapped to the ISO3
-# polygons used to draw them on the world map. ASSUMPTION - verify against IMPACT docs.
+# polygons used to draw them on the world map. Confirmed by Nicola on 2026-11-10 (R54), with
+# two corrections: SDN is Sudan only (South Sudan is not modelled, so it is left blank), and
+# Kosovo (XKX) is not part of OBN (left blank).
 # Small-island groups (CRB, OAO, OIO, OPO) are left off the map: their polygons are
 # mostly too small to see at world scale; their values still appear in charts and tables.
 MAP_MEMBERS = {
@@ -103,8 +105,8 @@ MAP_MEMBERS = {
     "SPP": ["ESP"],
     "UKP": ["GBR"],
     "GSA": ["GUY", "SUR", "GUF"],
-    "SDN": ["SDN", "SSD"],
-    "OBN": ["BIH", "MKD", "MNE", "SRB", "XKX"],
+    "SDN": ["SDN"],
+    "OBN": ["BIH", "MKD", "MNE", "SRB"],
     "OSA": ["BRN", "SGP"],
     "CRB": [], "OAO": [], "OIO": [], "OPO": [],
 }
@@ -138,14 +140,21 @@ EXCLUDE_GROUPS = {"FORx"}
 CLIP_AT_ZERO = {"Pop at risk of hunger", "Share Pop at risk of hunger"}
 # Countries whose risk-of-hunger values are dropped (shown as "no data"), not set to 0:
 # negative in every year despite the lowest calorie availability in the data (~1,950 kcal
-# per person per day in 2025), so 0 ("no one at risk") would mislead. Temporary, pending a
-# check with the IMPACT team (Nicola, 2026-10-21, R31). Aggregates are not changed.
+# per person per day in 2025), so 0 ("no one at risk") would mislead (Nicola, 2026-10-21,
+# R31; confirmed as the standing treatment 2026-11-10, R53, with no country-specific note
+# shown to users). Aggregates are not changed.
 HUNGER_NO_DATA = {"Burundi", "Eritrea"}
 # Single series removed from the dashboard (shown as "no data"), as (parameter, region,
 # commodity). Aggregates that include them are not changed (Nicola, 2026-10-22).
 #   - China maize net trade (R35): a model issue the team is fixing; temporary. IMPACT shows China as a large net
 #     exporter in 2025 (+31.5 million t), swinging to -7.0 in 2040 and +6.4 in 2045.
 SERIES_NO_DATA = {("Net Trade", "China", "Maize")}
+# Regions whose rows are dropped for every parameter and commodity (shown as "no data"
+# everywhere; still listed in the region picker and drawn grey on the maps). Aggregates
+# that include them are not changed (R34).
+#   - Greenland (Nicola, 2026-11-10, R56). It had no crop data already, and a share at
+#     risk of hunger of -15.8%, the most negative in the data.
+REGION_NO_DATA = {"Greenland"}
 
 
 def read_csv(name):
@@ -234,6 +243,10 @@ def main():
             df = df[~drop].copy()
         all_regions |= set(df["region"])
         all_commodities |= set(df["commodity"])
+        drop = df["region"].isin(REGION_NO_DATA)
+        if drop.any():
+            print(f"{fname}: {drop.sum()} rows dropped for {sorted(REGION_NO_DATA)}")
+            df = df[~drop].copy()
         drop = df["impactparameter"].isin(CLIP_AT_ZERO) & df["region"].isin(HUNGER_NO_DATA)
         if drop.any():
             print(f"{fname}: {drop.sum()} risk-of-hunger rows dropped for {sorted(HUNGER_NO_DATA)}")
