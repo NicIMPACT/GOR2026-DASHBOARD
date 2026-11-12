@@ -67,6 +67,7 @@ This is a running list of Nicola's instructions for the dashboard and the status
 | R59 | 2026-11-10 | Downloaded CSVs show "2025â€“2050" at the top: the dash is turned into a combination of characters. Fix it. | fixed 2026-11-10: every download starts with a UTF-8 byte-order mark, is labelled `text/csv;charset=utf-8` and uses Windows line endings (`table()` in `app.js`). Checked in headless Edge (file starts with `EF BB BF`); **tested by Nicola 2026-11-10** |
 | R60 | 2026-11-10 | The description lines at the top of the CSVs: commas should not break them across cells; leave out text that only makes sense on the chart. | built 2026-11-10: each description line is one quoted field, followed by a blank line and the table; chart-only phrases removed or rewritten via `csvDrop` in `config.js`. Checked in headless Edge on every CSV of all four tabs; **tested by Nicola 2026-11-10** |
 | R61 | 2026-11-10 | Add a button at the top of the region and commodity drop-downs that clears all selections, so a new set can be chosen without unticking each box. The dashboard must still open on the six CG regions. | built 2026-11-10: "Clear all" in both drop-downs (greyed out when nothing is selected; the drop-down stays open). No region: charts that need one show `noRegions` (also replaces the misleading "No data for the selected regions" and the trade tab's "World is not shown…"). No commodity: each tab shows Rice with `comNoneNote` until one is ticked. Defaults unchanged: a fresh launch, or a reload after "Clear all", opens on the six CG regions and Rice. Checked in headless Edge by clicking; **tested by Nicola 2026-11-10** |
+| R62 | 2026-11-12 | At the end of each page, under the attribution line, add: "This dashboard is a snapshot of the GOR results, with further updates and improvements anticipated over the coming months." | built 2026-11-12: second line in the footer of `index.html`, in the attribution's small grey style; the footer is shared by all four tabs, so one line covers every page. Attribution date updated to 2026-11-12 (R58 wording unchanged); **tested by Nicola 2026-11-12** |
 
 ## Data modifications
 
@@ -85,6 +86,21 @@ What users see: M1 is explained in a note on the hunger map, charts and ranking 
 Not a data change, but related: World has no net trade in IMPACT, so it is skipped on the trade tab (R33, `tradeExcluded` in `config.js`).
 
 Diary entries follow, newest first.
+
+---
+
+## 2026-11-12: snapshot notice in the footer (R62)
+
+**Steps**
+- Nicola asked for a line under the attribution saying the dashboard is a snapshot of the GOR results, with updates to come. Added it as a second paragraph in the footer of `index.html`. Previewed locally by Nicola, who confirmed it shows on every tab.
+
+**Decisions and why**
+- **One footer line covers all pages.** The four tabs are one HTML page with a shared footer, so no per-tab change was needed.
+- **Same small grey style as the attribution.** The two lines read as one closing block. A more prominent body-text style is an easy switch if wanted.
+- **Attribution date moved to 2026-11-12**, following the rule to update only the date when the dashboard is revised (R58).
+
+**Open to-dos**
+- Commit.
 
 ---
 
