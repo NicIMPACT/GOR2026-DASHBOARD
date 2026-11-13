@@ -1020,7 +1020,7 @@
     // Line chart and production-vs-demand bars side by side (R12).
     regionLines(card("prod-line", `${pLabel(ind)}${comSuffix(coms)}`, lineSub(pUnit(ind))), ds, ind, coms,
       { zero: true, indexable: true });
-    prodVsDemand(card("prod-vs-demand", `Production, total demand and food demand${comSuffix(coms)}, ${state.year}`,
+    prodVsDemand(card("prod-vs-demand", `Production, total demand, and food demand${comSuffix(coms)}, ${state.year}`,
       pUnit("Production")), ds, coms);
     ranking(card("prod-rank", `Top 15 countries by ${pLabel(ind).toLowerCase()}: ${cl}, ${state.year}`, pUnit(ind),
       { wide: true, controls: carousel("production", "rank", C.carousel.rank) }),
